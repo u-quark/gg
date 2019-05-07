@@ -57,8 +57,12 @@ packages:
 # arch: x86_64
 #
 # Extra directories used by stack for building
-# extra-include-dirs: [/path/to/dir]
+extra-include-dirs: [/usr/include/git2]
 # extra-lib-dirs: [/path/to/dir]
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+#
+
+ghc-options:
+    gg: -lgit2
