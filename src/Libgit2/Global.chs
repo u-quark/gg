@@ -4,11 +4,9 @@ module Libgit2.Global (
 
 where
 
-#define __CLANG_INTTYPES_H 
+#include "git2/global.h"
 
-#include "global.h"
-
-{#context prefix="git_"#}
+{#context lib="git2" prefix="git_"#}
 
 libgit2Init :: IO C2HSImp.CInt
 libgit2Init = {#call unsafe libgit2_init#}
