@@ -3,6 +3,7 @@
 module Libgit2.Errors (
     Libgit2Exception(..)
   , checkReturnCode
+  , checkReturnCodeIter
   , Error(..)
   , ErrorCode(..)
   , ErrorClass(..)
@@ -15,7 +16,7 @@ import Control.Monad (liftM)
 import Control.Exception (Exception, throwIO)
 import Text.Printf (printf)
 import Foreign (peek, Storable)
-import Foreign.C (peekCString)
+import Foreign.C (peekCString, CInt)
 import Libgit2.Utils (IterResult(..))
 
 #include "git2/errors.h"
@@ -33,7 +34,7 @@ instance Storable Error where
   peek p = Error
     <$> (peekCString =<< ({#get error->message #} p))
     <*> liftM (toEnum . fromIntegral) ({#get error->klass #} p)
-  poke p = undefined
+  poke _ = undefined
 
 -- |
 -- Corresponds to giterr_last() in the C library. The name matches
@@ -46,19 +47,21 @@ data Libgit2Exception = Libgit2Exception Error ErrorCode deriving (Eq)
 instance Exception Libgit2Exception
 
 instance Show Libgit2Exception where
-    show (Libgit2Exception (Error {message = message, klass = klass}) errorCode) =
+    show (Libgit2Exception (Error {message = m, klass = k}) errorCode) =
       printf "Libgit2 error %s[%d]/%s[%d]: %s"
         (show errorCode)
         (fromEnum errorCode)
-        (show klass)
-        (fromEnum klass)
-        message
+        (show k)
+        (fromEnum k)
+        m
 
+throwLastError :: Int -> IO a
 throwLastError returnCode = do
-    error <- errorLast
-    let exception = Libgit2Exception error (toEnum returnCode)
+    err <- errorLast
+    let exception = Libgit2Exception err (toEnum returnCode)
     throwIO exception
 
+checkReturnCode :: CInt -> IO ()
 checkReturnCode cReturnCode = do
     let returnCode = fromIntegral cReturnCode
     if toEnum returnCode == Ok then
@@ -66,6 +69,7 @@ checkReturnCode cReturnCode = do
     else
         throwLastError returnCode
 
+checkReturnCodeIter :: CInt -> IO IterResult
 checkReturnCodeIter cReturnCode = do
     let returnCode = fromIntegral cReturnCode
     if toEnum returnCode == Ok then

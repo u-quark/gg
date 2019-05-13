@@ -24,6 +24,8 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -Wall
   exposed-modules:
     - Lib
     - Libgit2.Types   # XXX order matters here: we need Libgit2/Type.chi to be produced first
@@ -39,6 +41,7 @@ executables:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
+    - -Wall
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
@@ -50,6 +53,7 @@ tests:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
+    - -Wall
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N

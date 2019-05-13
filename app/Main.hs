@@ -8,5 +8,5 @@ main = do
     someFunc
     r <- libgit2Init
     putStrLn $ show r
-    repo <- repositoryOpenExt "./src/Libgit2" repositoryOpenNoFlags ""
+    _ <- repositoryOpenExt "./src/Libgit2" repositoryOpenNoFlags ""
     pure ()
