@@ -32,6 +32,7 @@ library:
     - Libgit2.Errors
     - Libgit2.Global
     - Libgit2.Repository
+    - Libgit2.Revwalk
 
 executables:
   gg:

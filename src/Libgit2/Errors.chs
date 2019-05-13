@@ -16,6 +16,7 @@ import Control.Exception (Exception, throwIO)
 import Text.Printf (printf)
 import Foreign (peek, Storable)
 import Foreign.C (peekCString)
+import Libgit2.Utils (IterResult(..))
 
 #include "git2/errors.h"
 
@@ -53,11 +54,23 @@ instance Show Libgit2Exception where
         (fromEnum klass)
         message
 
+throwLastError returnCode = do
+    error <- errorLast
+    let exception = Libgit2Exception error (toEnum returnCode)
+    throwIO exception
+
 checkReturnCode cReturnCode = do
     let returnCode = fromIntegral cReturnCode
     if toEnum returnCode == Ok then
         pure ()
-    else do
-        error <- errorLast
-        let exception = Libgit2Exception error (toEnum returnCode)
-        throwIO exception
+    else
+        throwLastError returnCode
+
+checkReturnCodeIter cReturnCode = do
+    let returnCode = fromIntegral cReturnCode
+    if toEnum returnCode == Ok then
+        pure IterHasMore
+    else if toEnum returnCode == Iterover then
+        pure IterOver
+    else
+        throwLastError returnCode
