@@ -8,16 +8,20 @@ module Libgit2.Revwalk (
   , sortReverse
   , revwalkNew
   , revwalkSorting
+  , revwalkNext
+  , revwalkPushHead
 )
 
 where
 
 {#import Libgit2.Types#}
+{#import Libgit2.OID#}
 
 import Foreign (alloca)
 import Foreign.C (CUInt)
 import Data.Bits (Bits)
-import Libgit2.Errors (checkReturnCode)
+import Libgit2.Errors (checkReturnCode, checkReturnCodeIter)
+import Libgit2.Utils (IterResult)
 
 #include "git2/revwalk.h"
 
@@ -45,3 +49,7 @@ sortReverse = fromSortEnum InternalReverse
 {#fun unsafe revwalk_new as revwalkNew { alloca- `Revwalk' peekNewRevwalk*, `Repository' } -> `Int' checkReturnCode*-#}
 
 {#fun unsafe revwalk_sorting as revwalkSorting { `Revwalk', fromSortFlags `SortFlags' } -> `()' #}
+
+{#fun unsafe revwalk_next as revwalkNext { `OID', `Revwalk' } -> `IterResult' checkReturnCodeIter*#}
+
+{#fun unsafe revwalk_push_head as revwalkPushHead { `Revwalk' } -> `Int' checkReturnCode*-#}

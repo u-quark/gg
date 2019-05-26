@@ -4,6 +4,7 @@ module Libgit2.Errors (
     Libgit2Exception(..)
   , checkReturnCode
   , checkReturnCodeIter
+  , intAndCheckReturnCode
   , Error(..)
   , ErrorCode(..)
   , ErrorClass(..)
@@ -34,7 +35,7 @@ instance Storable Error where
   peek p = Error
     <$> (peekCString =<< ({#get error->message #} p))
     <*> liftM (toEnum . fromIntegral) ({#get error->klass #} p)
-  poke _ = undefined
+  poke _ = error "Can't poke Error"
 
 -- |
 -- Corresponds to giterr_last() in the C library. The name matches
@@ -78,3 +79,12 @@ checkReturnCodeIter cReturnCode = do
         pure IterOver
     else
         throwLastError returnCode
+
+intAndCheckReturnCode :: CInt -> IO Int
+intAndCheckReturnCode cReturnCode = do
+    let intOrReturnCode = fromIntegral cReturnCode
+    if intOrReturnCode < fromEnum Ok then
+        throwLastError $ toEnum intOrReturnCode
+    else
+        pure intOrReturnCode
+

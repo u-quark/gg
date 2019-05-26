@@ -29,6 +29,7 @@ library:
   exposed-modules:
     - Lib
     - Libgit2.Types   # XXX order matters here: we need Libgit2/Type.chi to be produced first
+    - Libgit2.OID
     - Libgit2
     - Libgit2.Utils
     - Libgit2.Errors

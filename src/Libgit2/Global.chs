@@ -6,7 +6,8 @@ where
 
 #include "git2/global.h"
 
+import Libgit2.Errors (intAndCheckReturnCode)
+
 {#context lib="git2" prefix="git_"#}
 
-libgit2Init :: IO C2HSImp.CInt
-libgit2Init = {#call unsafe libgit2_init#}
+{#fun unsafe libgit2_init as libgit2Init {} -> `Int' intAndCheckReturnCode*#}
