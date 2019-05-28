@@ -87,4 +87,3 @@ intAndCheckReturnCode cReturnCode = do
         throwLastError $ toEnum intOrReturnCode
     else
         pure intOrReturnCode
-

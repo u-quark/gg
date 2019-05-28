@@ -28,13 +28,14 @@ library:
   - -Wall
   exposed-modules:
     - Lib
-    - Libgit2.Types   # XXX order matters here: we need Libgit2/Type.chi to be produced first
+    - Libgit2.Types   # XXX order matters here: we need Libgit2/Types.chi to be produced first
     - Libgit2.OID
     - Libgit2
     - Libgit2.Utils
     - Libgit2.Errors
     - Libgit2.Global
     - Libgit2.Repository
+    - Libgit2.Commit
     - Libgit2.Revwalk
 
 executables:
