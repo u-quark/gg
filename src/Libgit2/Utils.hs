@@ -5,7 +5,7 @@ module Libgit2.Utils (
 
 where
 
-import Foreign (peek, Ptr, ForeignPtr, newForeignPtr, FinalizerPtr)
+import           Foreign (FinalizerPtr, ForeignPtr, Ptr, newForeignPtr, peek)
 
 peekNew :: (ForeignPtr a -> b) -> FinalizerPtr a -> Ptr (Ptr a) -> IO b
 peekNew haskellConstructor cDestructor ptr = do
