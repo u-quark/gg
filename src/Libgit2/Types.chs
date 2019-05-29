@@ -11,11 +11,14 @@ module Libgit2.Types (
   , peekNewCommit
   , commitFree
   , withCommit
+  , gitToLocalTime
 )
 
 where
 
 import Foreign (Ptr)
+import Data.Time.LocalTime (ZonedTime, minutesToTimeZone, utcToZonedTime)
+import Data.Time.Clock.POSIX (POSIXTime, posixSecondsToUTCTime)
 import Libgit2.Utils (peekNew)
 
 #include <git2/types.h>
@@ -39,3 +42,10 @@ peekNewRevwalk = peekNew Revwalk revwalkFree
 
 peekNewCommit :: Ptr (Ptr Commit) -> IO Commit
 peekNewCommit = peekNew Commit commitFree
+
+gitToLocalTime :: POSIXTime -> Int -> ZonedTime
+gitToLocalTime posixTime offset =
+  utcToZonedTime timezone utcTime
+  where
+    utcTime = posixSecondsToUTCTime posixTime
+    timezone = minutesToTimeZone offset

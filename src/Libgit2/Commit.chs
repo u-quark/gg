@@ -4,6 +4,7 @@ module Libgit2.Commit (
   , commitMessage
   , commitSummary
   , commitBody
+  , commitTime
 )
 
 where
@@ -13,6 +14,7 @@ where
 
 import Foreign (alloca)
 import Foreign.C (CString)
+import Data.Time.LocalTime (ZonedTime)
 import Libgit2.Errors (checkReturnCode)
 import Libgit2.Utils (defaultPeekCString, errorPeekCString)
 
@@ -38,3 +40,13 @@ nullIsEmptyPeekCString :: CString -> IO String
 nullIsEmptyPeekCString = defaultPeekCString ""
 
 {#fun unsafe commit_body as commitBody { `Commit' } -> `String' nullIsEmptyPeekCString*#}
+
+{#fun unsafe commit_time as commitTime' { `Commit' } -> `Int'#}
+
+{#fun unsafe commit_time_offset as commitTimeOffset { `Commit' } -> `Int'#}
+
+commitTime :: Commit -> IO ZonedTime
+commitTime commit = do
+  systemTime <- commitTime' commit
+  offset <- commitTimeOffset commit
+  pure $ gitToLocalTime (fromIntegral systemTime) offset
