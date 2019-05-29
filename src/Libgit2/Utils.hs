@@ -1,7 +1,9 @@
 module Libgit2.Utils (
     peekNew
+  , errorNullPeek
   , maybeNullPeek
   , defaultNullPeek
+  , errorPeekCString
   , defaultPeekCString
   , IterResult(..)
 )
@@ -18,6 +20,13 @@ peekNew haskellConstructor cDestructor ptr = do
     fptr <- newForeignPtr cDestructor obj
     pure $ haskellConstructor fptr
 
+errorNullPeek :: Monad m => (Ptr a -> m b) -> String -> Ptr a -> m b
+errorNullPeek peekFn errorMsg pointer =
+  if pointer /= nullPtr then
+    peekFn pointer
+  else
+    error errorMsg
+
 maybeNullPeek :: Monad m => (Ptr a -> m b) -> Ptr a -> m (Maybe b)
 maybeNullPeek peekFn pointer =
   if pointer /= nullPtr then do
@@ -32,6 +41,9 @@ defaultNullPeek peekFn defaultValue pointer =
     peekFn pointer
   else
     pure defaultValue
+
+errorPeekCString :: String -> CString -> IO String
+errorPeekCString = errorNullPeek peekCString
 
 defaultPeekCString :: String -> CString -> IO String
 defaultPeekCString = defaultNullPeek peekCString
