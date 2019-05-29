@@ -5,6 +5,8 @@ module Libgit2.Commit (
   , commitSummary
   , commitBody
   , commitTime
+  , commitAuthor
+  , commitCommitter
 )
 
 where
@@ -12,7 +14,7 @@ where
 {#import Libgit2.Types#}
 {#import Libgit2.OID#}
 
-import Foreign (alloca)
+import Foreign (alloca, peek)
 import Foreign.C (CString)
 import Data.Time.LocalTime (ZonedTime)
 import Libgit2.Errors (checkReturnCode)
@@ -50,3 +52,7 @@ commitTime commit = do
   systemTime <- commitTime' commit
   offset <- commitTimeOffset commit
   pure $ gitToLocalTime (fromIntegral systemTime) offset
+
+{#fun unsafe commit_committer as commitCommitter { `Commit' } -> `Signature' peek*#}
+
+{#fun unsafe commit_author as commitAuthor { `Commit' } -> `Signature' peek*#}

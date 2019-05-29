@@ -1,16 +1,20 @@
 module Libgit2.Utils (
     peekNew
+  , peekF
+  , peekFCString
   , errorNullPeek
   , maybeNullPeek
   , defaultNullPeek
   , errorPeekCString
   , defaultPeekCString
+  , errorPeekFCString
+  , defaultPeekFCString
   , IterResult(..)
 )
 
 where
 
-import           Foreign   (FinalizerPtr, ForeignPtr, Ptr, newForeignPtr,
+import           Foreign   (FinalizerPtr, ForeignPtr, Ptr, free, newForeignPtr,
                             nullPtr, peek)
 import           Foreign.C (CString, peekCString)
 
@@ -47,5 +51,20 @@ errorPeekCString = errorNullPeek peekCString
 
 defaultPeekCString :: String -> CString -> IO String
 defaultPeekCString = defaultNullPeek peekCString
+
+peekF :: (Ptr a -> IO b) -> Ptr a -> IO b
+peekF peekFn p = do
+  res <- peekFn p
+  free p
+  pure res
+
+peekFCString :: CString -> IO String
+peekFCString = peekF peekCString
+
+errorPeekFCString :: String -> CString -> IO String
+errorPeekFCString = errorNullPeek peekFCString
+
+defaultPeekFCString :: String -> CString -> IO String
+defaultPeekFCString = defaultNullPeek peekFCString
 
 data IterResult = IterHasMore | IterOver

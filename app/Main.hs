@@ -1,13 +1,21 @@
 module Main where
 
+import           Data.Time        (ZonedTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           Lib              (someFunc)
 import           Libgit2          (IterResult (..), OID, Repository, Revwalk,
-                                   commitBody, commitLookup,
+                                   Signature (..), commitAuthor, commitBody,
+                                   commitCommitter, commitLookup,
                                    commitMessageEncoding, commitSummary,
                                    commitTime, libgit2Init, newOID, oidToStrS,
                                    repositoryOpenExt, repositoryOpenNoFlags,
                                    revwalkNew, revwalkNext, revwalkPushHead)
+
+myFormatTime :: ZonedTime -> String
+myFormatTime = formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S %Z"
+
+formatSignature :: Signature -> String
+formatSignature sig = signatureName sig <> " <" <> signatureEmail sig <> "> " <> myFormatTime (signatureWhen sig)
 
 printCommit :: Repository -> OID -> IO ()
 printCommit repo oid = do
@@ -17,10 +25,14 @@ printCommit repo oid = do
   messageEncoding <- commitMessageEncoding commit
   summary <- commitSummary commit
   time <- commitTime commit
-  let timeStr = formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S %Z" time
-  body <- commitBody commit
+  let timeStr = myFormatTime time
   putStrLn $ shortOID <> " " <> messageEncoding <> " " <> timeStr <> " " <> summary
+  author <- commitAuthor commit
+  putStrLn $ "Author: " <> formatSignature author
+  committer <- commitCommitter commit
+  putStrLn $ "Committer: " <> formatSignature committer
   putStrLn ""
+  body <- commitBody commit
   if body /= "" then do
     putStrLn body
     putStrLn ""
