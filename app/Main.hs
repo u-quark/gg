@@ -2,6 +2,7 @@ module Main where
 
 import           Data.Time        (ZonedTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
+import qualified GG.UI            as UI
 import           Lib              (someFunc)
 import           Libgit2          (IterResult (..), OID, Repository, Revwalk,
                                    Signature (..), commitAuthor, commitBody,
@@ -33,11 +34,11 @@ printCommit repo oid = do
   putStrLn $ "Committer: " <> formatSignature committer
   putStrLn ""
   body <- commitBody commit
-  if body /= "" then do
-    putStrLn body
-    putStrLn ""
-  else
-    pure ()
+  if body /= ""
+    then do
+      putStrLn body
+      putStrLn ""
+    else pure ()
 
 printOIDs :: Repository -> Revwalk -> IO ()
 printOIDs repo revwalk = do
@@ -60,3 +61,4 @@ main = do
   revwalk <- revwalkNew repo
   revwalkPushHead revwalk
   printOIDs repo revwalk
+  UI.main

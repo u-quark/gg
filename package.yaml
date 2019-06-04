@@ -33,6 +33,7 @@ library:
   - -Wall
   exposed-modules:
     - Lib
+    - GG.UI
     - Libgit2.Types   # XXX order matters here: we need Libgit2/Types.chi to be produced first
     - Libgit2.OID
     - Libgit2
