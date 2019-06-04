@@ -3,6 +3,8 @@
 
 module GG.UI
   ( main
+  , Commit(..)
+  , initState
   ) where
 
 import           Brick              (App (..), AttrMap, AttrName,
@@ -15,6 +17,7 @@ import qualified Brick.Widgets.List as L
 import           Control.Lens       (set, (^.))
 import           Control.Lens.TH    (makeLenses)
 import           Control.Monad      (void)
+import           Data.Time          (ZonedTime, defaultTimeLocale, formatTime)
 import qualified Data.Vector        as Vec
 import qualified Graphics.Vty       as V
 
@@ -28,7 +31,7 @@ data Commit =
     , _summary     :: String
     , _authorName  :: String
     , _authorEmail :: String
-    , _authorWhen  :: String
+    , _authorWhen  :: ZonedTime
     }
 
 data State =
@@ -41,22 +44,8 @@ makeLenses ''Commit
 
 makeLenses ''State
 
-testState :: State
-testState =
-  State
-    { _commitList =
-        L.list
-          CommitList
-          (Vec.fromList
-             [ Commit "12345678" "This is the last commit" "Me" "me@mail.com" "2019-06-01 22:22"
-             , Commit "23456789" "This is an awesome commit" "Myself" "myself@mail.com" "2019-05-31 19:12"
-             , Commit "34567890" "This is an even more awesome commit" "I" "i@mail.com" "2019-05-30 15:32"
-             , Commit "45678901" "This is commit is less impressive" "Me again" "again@mail.com" "2019-05-29 11:52"
-             , Commit "56789012" "This is the first commit" "Someone" "mystery@mail.com" "2019-05-29 10:42"
-             ])
-          1
-    , _branchName = "master"
-    }
+initState :: [Commit] -> State
+initState l = State {_commitList = L.list CommitList (Vec.fromList l) 1, _branchName = "master"}
 
 data Event
 
@@ -93,14 +82,20 @@ statusBarAttr = "status_bar"
 statusBranchAttr :: AttrName
 statusBranchAttr = statusBarAttr <> "status_branch"
 
+myFormatTime :: ZonedTime -> String
+myFormatTime = formatTime defaultTimeLocale "%Y-%m-%d %H:%M"
+
+formatOid :: String -> String
+formatOid = take 8
+
 drawCommit :: Bool -> Commit -> Widget Name
 drawCommit _selected c =
-  withAttr oidAttr (str (c ^. oid)) <+>
+  withAttr oidAttr (str $ formatOid (c ^. oid)) <+>
   str " " <+>
   str (c ^. summary) <+>
   padRight Max (str " ") <+>
   withAttr authorAttr (str ((c ^. authorName) <> " <" <> (c ^. authorEmail) <> ">")) <+>
-  str " " <+> withAttr dateAttr (str (c ^. authorWhen))
+  str " " <+> withAttr dateAttr (str $ myFormatTime (c ^. authorWhen))
 
 drawUI :: State -> [Widget Name]
 drawUI s =
@@ -174,11 +169,11 @@ theMap =
     , (authorAttr, fg violet)
     , (dateAttr, fg green)
     , (statusBarAttr, base03 `on` base2)
-    , (statusBranchAttr, fg base01)
+    , (statusBranchAttr, fg base03)
     ]
 
-main :: IO ()
-main = do
+main :: State -> IO ()
+main state = do
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
-  void $ customMain initialVty buildVty Nothing app testState
+  void $ customMain initialVty buildVty Nothing app state
