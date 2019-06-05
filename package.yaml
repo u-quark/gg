@@ -26,7 +26,6 @@ dependencies:
 - vty
 - lens
 - vector
-- monad-loops
 
 library:
   source-dirs: src
@@ -34,6 +33,7 @@ library:
   - -Wall
   exposed-modules:
     - Lib
+    - GG.State
     - GG.UI
     - GG.Repo
     - Libgit2.Types   # XXX order matters here: we need Libgit2/Types.chi to be produced first

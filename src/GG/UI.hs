@@ -1,51 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
 
 module GG.UI
   ( main
   , Commit(..)
-  , initState
   ) where
 
-import           Brick              (App (..), AttrMap, AttrName,
-                                     BrickEvent (..), EventM, Next,
-                                     Padding (..), Widget, attrMap, continue,
-                                     customMain, fg, halt, neverShowCursor, on,
-                                     padBottom, padRight, str, withAttr, (<+>),
-                                     (<=>))
-import qualified Brick.Widgets.List as L
-import           Control.Lens       (set, (^.))
-import           Control.Lens.TH    (makeLenses)
-import           Control.Monad      (void)
-import           Data.Time          (ZonedTime, defaultTimeLocale, formatTime)
-import qualified Data.Vector        as Vec
-import qualified Graphics.Vty       as V
-
-data Name =
-  CommitList
-  deriving (Eq, Ord, Show)
-
-data Commit =
-  Commit
-    { _oid         :: String
-    , _summary     :: String
-    , _authorName  :: String
-    , _authorEmail :: String
-    , _authorWhen  :: ZonedTime
-    }
-
-data State =
-  State
-    { _commitList :: L.List Name Commit
-    , _branchName :: String
-    }
-
-makeLenses ''Commit
-
-makeLenses ''State
-
-initState :: [Commit] -> State
-initState l = State {_commitList = L.list CommitList (Vec.fromList l) 1, _branchName = "master"}
+import           Brick                  (App (..), AttrMap, AttrName,
+                                         BrickEvent (..), EventM, Next,
+                                         Padding (..), Widget, attrMap,
+                                         continue, customMain, fg, halt,
+                                         neverShowCursor, on, padBottom,
+                                         padRight, str, withAttr, (<+>), (<=>))
+import qualified Brick.Widgets.List     as L
+import           Control.Lens           (over, set, to, (^.))
+import           Control.Monad          (void)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.Maybe             (fromMaybe)
+import           Data.Time              (ZonedTime, defaultTimeLocale,
+                                         formatTime)
+import qualified Data.Vector            as Vec
+import           GG.Repo                (readNCommits)
+import           GG.State               (Commit (..), Name (..), State (..),
+                                         authorEmail, authorName, authorWhen,
+                                         branchName, commitList, oid,
+                                         repository, revwalk, summary)
+import qualified Graphics.Vty           as V
 
 data Event
 
@@ -62,10 +41,21 @@ app =
 handleEvent :: State -> BrickEvent Name Event -> EventM Name (Next State)
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt s
 handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = halt s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'G') [])) = continue s -- disable going to the end of the list
+handleEvent s (VtyEvent (V.EvKey V.KEnd [])) = continue s
 handleEvent s (VtyEvent ev) = do
-  newList <- L.handleListEventVi L.handleListEvent ev (s ^. commitList)
-  continue $ set commitList newList s
+  l <- liftIO $ checkNeedsMoreCommits (s ^. commitList) s
+  l' <- L.handleListEventVi L.handleListEvent ev l
+  continue $ set commitList l' s
 handleEvent s _ = continue s
+
+checkNeedsMoreCommits :: L.List Name Commit -> State -> IO (L.List Name Commit)
+checkNeedsMoreCommits l s =
+  if ((l ^. L.listElementsL . to length) - (l ^. L.listSelectedL . to (fromMaybe 0))) < 500
+    then do
+      moreCommits <- readNCommits 500 (s ^. repository) (s ^. revwalk)
+      pure $ over L.listElementsL (Vec.++ Vec.fromList moreCommits) l
+    else pure l
 
 oidAttr :: AttrName
 oidAttr = L.listAttr <> "oid"
@@ -90,12 +80,10 @@ formatOid = take 8
 
 drawCommit :: Bool -> Commit -> Widget Name
 drawCommit _selected c =
-  withAttr oidAttr (str $ formatOid (c ^. oid)) <+>
-  str " " <+>
-  str (c ^. summary) <+>
-  padRight Max (str " ") <+>
+  withAttr oidAttr (str $ formatOid (c ^. oid)) <+> str " " <+> str (c ^. summary) <+> padRight Max (str " ") <+>
   withAttr authorAttr (str ((c ^. authorName) <> " <" <> (c ^. authorEmail) <> ">")) <+>
-  str " " <+> withAttr dateAttr (str $ myFormatTime (c ^. authorWhen))
+  str " " <+>
+  withAttr dateAttr (str $ myFormatTime (c ^. authorWhen))
 
 drawUI :: State -> [Widget Name]
 drawUI s =
