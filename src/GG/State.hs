@@ -33,5 +33,5 @@ makeLenses ''Commit
 
 makeLenses ''State
 
-initState :: Repository -> Revwalk -> [Commit] -> State
-initState repo revw l = State (L.list CommitList (Vec.fromList l) 1) "master" repo revw
+initState :: Repository -> Revwalk -> String -> [Commit] -> State
+initState repo revw branch l = State (L.list CommitList (Vec.fromList l) 1) branch repo revw

@@ -11,6 +11,10 @@ module Libgit2.Types (
   , peekNewCommit
   , commitFree
   , withCommit
+  , Reference(..)
+  , peekNewReference
+  , referenceFree
+  , withReference
   , gitToLocalTime
   , Signature(..)
   , SignaturePtr
@@ -28,6 +32,7 @@ import Libgit2.Utils (peekNew)
 #include <git2/repository.h>
 #include <git2/commit.h>
 #include <git2/revwalk.h>
+#include <git2/refs.h>
 
 {#context lib="git2" prefix="git_"#}
 
@@ -45,6 +50,11 @@ peekNewRevwalk = peekNew Revwalk revwalkFree
 
 peekNewCommit :: Ptr (Ptr Commit) -> IO Commit
 peekNewCommit = peekNew Commit commitFree
+
+{#pointer *reference as Reference foreign finalizer reference_free as referenceFree newtype#}
+
+peekNewReference :: Ptr (Ptr Reference) -> IO Reference
+peekNewReference = peekNew Reference referenceFree
 
 gitToLocalTime :: POSIXTime -> Int -> ZonedTime
 gitToLocalTime posixTime offset =

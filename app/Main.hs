@@ -6,6 +6,6 @@ import qualified GG.UI    as UI
 
 main :: IO ()
 main = do
-  (repo, revwalk) <- readRepository
+  (repo, revwalk, branch) <- readRepository
   commits <- readNCommits 1000 repo revwalk
-  UI.main $ S.initState repo revwalk commits
+  UI.main $ S.initState repo revwalk branch commits

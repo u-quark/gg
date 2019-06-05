@@ -7,6 +7,7 @@ import qualified GG.State as S
 import           Libgit2  (IterResult (..), OID, Repository, Revwalk,
                            Signature (..), commitAuthor, commitLookup,
                            commitSummary, libgit2Init, newOID, oidToStrS,
+                           referenceShorthand, repositoryHead,
                            repositoryOpenExt, repositoryOpenNoFlags, revwalkNew,
                            revwalkNext, revwalkPushHead)
 
@@ -31,10 +32,12 @@ readNCommits n repo revwalk = do
               loop (i + 1) oid (c : acc)
             IterOver -> pure $ reverse acc
 
-readRepository :: IO (Repository, Revwalk)
+readRepository :: IO (Repository, Revwalk, String)
 readRepository = do
   _ <- libgit2Init
   repo <- repositoryOpenExt "." repositoryOpenNoFlags ""
   revwalk <- revwalkNew repo
   revwalkPushHead revwalk
-  pure (repo, revwalk)
+  headRef <- repositoryHead repo
+  branch <- referenceShorthand headRef
+  pure (repo, revwalk, branch)

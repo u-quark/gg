@@ -9,6 +9,7 @@ module Libgit2.Repository (
   , repositoryOpenBare
   , repositoryOpenNoDotgit
   , repositoryOpenFromEnv
+  , repositoryHead
 )
 
 where
@@ -50,3 +51,5 @@ repositoryOpenFromEnv :: RepositoryOpenFlags
 repositoryOpenFromEnv = fromOpenEnum InternalOpenFromEnv
 
 {#fun unsafe repository_open_ext as repositoryOpenExt { alloca- `Repository' peekNewRepository*, `String', fromRepositoryOpenFlags `RepositoryOpenFlags', `String' } -> `Int' checkReturnCode*-#}
+
+{#fun unsafe repository_head as repositoryHead { alloca- `Reference' peekNewReference*, `Repository' } -> `Int' checkReturnCode*-#}
