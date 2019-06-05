@@ -14,5 +14,10 @@
  * Merge strategy (create merge commit and push after rebase).
  * Read configuration from `~/.gitconfig`.
  * Auto-refresh repo view powered by inotify.
- * Collapse commits corresponding to merge into one, visually (implies rebase-merge strategy).
+ * Collapse commits corresponding to merge into one, visually (implies
+   rebase-merge strategy).
  * Ignore commits that don't confront to a rebase-merge strategy.
+ * Upon startup gg saves all uncommitted changes and untracked files (but not
+   ignored) to a commit on HEAD (named `WIP - gg`) and upon exit resets all
+   those commits that are on top. This is done that local changes are not lost
+   while re-writing the history.
