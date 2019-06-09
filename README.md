@@ -1,4 +1,7 @@
-# gg
+# gg - git (G)UI
+
+A tool for interactively manipulating the history of git repos and for making
+easy (enforcing) the usage of good (opinionated) practices.
 
 ## Features
 
