@@ -18,12 +18,15 @@ import           Control.Monad.IO.Class (liftIO)
 import           Data.Maybe             (fromMaybe)
 import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime)
+import           Data.Vector            (toList)
 import qualified Data.Vector            as Vec
-import           GG.Repo                (readNCommits)
+import           GG.Repo                (Action, doRebase, moveCommitUp,
+                                         readCommits, readNCommits)
 import           GG.State               (Commit (..), Name (..), State (..),
                                          authorEmail, authorName, authorWhen,
                                          branchName, commitList, oid,
-                                         repository, revwalk, summary)
+                                         repository, revwalk, summary,
+                                         updateCommitsPos, updateRepoState)
 import qualified Graphics.Vty           as V
 
 data Event
@@ -43,6 +46,7 @@ handleEvent s (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt s
 handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = halt s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'G') [])) = continue s -- disable going to the end of the list
 handleEvent s (VtyEvent (V.EvKey V.KEnd [])) = continue s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doAction moveCommitUp s
 handleEvent s (VtyEvent ev) = do
   l <- liftIO $ checkNeedsMoreCommits (s ^. commitList) s
   l' <- L.handleListEventVi L.handleListEvent ev l
@@ -56,6 +60,21 @@ checkNeedsMoreCommits l s =
       moreCommits <- readNCommits 500 (s ^. repository) (s ^. revwalk)
       pure $ over L.listElementsL (Vec.++ Vec.fromList moreCommits) l
     else pure l
+
+doAction :: Action -> State -> EventM Name (Next State)
+doAction a s = do
+  s' <-
+    liftIO $ do
+      let commitHashes = map _oid (s ^. commitList . L.listElementsL . to toList)
+      let pos = s ^. commitList . L.listSelectedL . to (fromMaybe 0)
+      newPosM <- doRebase commitHashes pos a
+      case newPosM of
+        Just newPos -> do
+          (revw, branch) <- readCommits $ s ^. repository
+          commits <- readNCommits (pos + 500) (s ^. repository) revw
+          pure $ (updateRepoState revw branch commits . updateCommitsPos newPos) s
+        Nothing -> pure s
+  continue s'
 
 oidAttr :: AttrName
 oidAttr = L.listAttr <> "oid"

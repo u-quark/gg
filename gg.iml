@@ -79,5 +79,6 @@
     <orderEntry type="library" name="adjunctions-4.4" level="project" />
     <orderEntry type="library" name="invariant-0.5.2" level="project" />
     <orderEntry type="library" name="void-0.7.2" level="project" />
+    <orderEntry type="library" name="process-1.6.5.0" level="project" />
   </component>
 </module>

@@ -26,6 +26,7 @@ dependencies:
 - vty
 - lens
 - vector
+- process
 
 library:
   source-dirs: src

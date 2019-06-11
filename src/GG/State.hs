@@ -3,6 +3,7 @@
 module GG.State where
 
 import qualified Brick.Widgets.List as L
+import           Control.Lens       (set)
 import           Control.Lens.TH    (makeLenses)
 import           Data.Time          (ZonedTime)
 import qualified Data.Vector        as Vec
@@ -35,3 +36,10 @@ makeLenses ''State
 
 initState :: Repository -> Revwalk -> String -> [Commit] -> State
 initState repo revw branch l = State (L.list CommitList (Vec.fromList l) 1) branch repo revw
+
+updateRepoState :: Revwalk -> String -> [Commit] -> State -> State
+updateRepoState revw branch l =
+  set (commitList . L.listElementsL) (Vec.fromList l) . set revwalk revw . set branchName branch
+
+updateCommitsPos :: Int -> State -> State
+updateCommitsPos pos = set (commitList . L.listSelectedL) (Just pos)
