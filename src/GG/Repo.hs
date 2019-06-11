@@ -5,6 +5,8 @@ module GG.Repo
   , Action
   , doRebase
   , moveCommitUp
+  , moveCommitDown
+  , fixupCommit
   ) where
 
 import           Data.Char      (toLower)
@@ -89,6 +91,28 @@ moveCommitUp commitHashes pos =
     noCommitsToRebase = pos + 1
     lastTwo = [(Pick, commitHashes !! pos), (Pick, commitHashes !! (pos - 1))]
     theRest = [(Pick, c) | c <- take (pos - 1) commitHashes]
+
+moveCommitDown :: Action
+moveCommitDown commitHashes pos =
+  case pos of
+    x
+      | x < length commitHashes -> Just (pos + 1, noCommitsToRebase, reverse $ theRest <> lastTwo)
+    _ -> Nothing
+  where
+    noCommitsToRebase = pos + 2
+    lastTwo = [(Pick, commitHashes !! (pos + 1)), (Pick, commitHashes !! pos)]
+    theRest = [(Pick, c) | c <- take pos commitHashes]
+
+fixupCommit :: Action
+fixupCommit commitHashes pos =
+  case pos of
+    x
+      | x < length commitHashes -> Just (pos, noCommitsToRebase, reverse $ theRest <> lastTwo)
+    _ -> Nothing
+  where
+    noCommitsToRebase = pos + 2
+    lastTwo = [(Fixup, commitHashes !! pos), (Pick, commitHashes !! (pos + 1))]
+    theRest = [(Pick, c) | c <- take pos commitHashes]
 
 formatRebaseCommand :: Int -> [(RebaseCommand, String)] -> String
 formatRebaseCommand upto commitCommands = "GIT_EDITOR='echo " <> commitsStr <> " >$1' git rebase -i HEAD~" <> show upto

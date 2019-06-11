@@ -20,7 +20,8 @@ import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime)
 import           Data.Vector            (toList)
 import qualified Data.Vector            as Vec
-import           GG.Repo                (Action, doRebase, moveCommitUp,
+import           GG.Repo                (Action, doRebase, fixupCommit,
+                                         moveCommitDown, moveCommitUp,
                                          readCommits, readNCommits)
 import           GG.State               (Commit (..), Name (..), State (..),
                                          authorEmail, authorName, authorWhen,
@@ -47,6 +48,8 @@ handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = halt s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'G') [])) = continue s -- disable going to the end of the list
 handleEvent s (VtyEvent (V.EvKey V.KEnd [])) = continue s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doAction moveCommitUp s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doAction moveCommitDown s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doAction fixupCommit s
 handleEvent s (VtyEvent ev) = do
   l <- liftIO $ checkNeedsMoreCommits (s ^. commitList) s
   l' <- L.handleListEventVi L.handleListEvent ev l
