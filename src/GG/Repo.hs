@@ -1,7 +1,8 @@
 module GG.Repo
   ( readNCommits
   , readRepository
-  , readCommits
+  , readRepoState
+  , readCommit
   , Action
   , doRebase
   , moveCommitUp
@@ -11,49 +12,58 @@ module GG.Repo
 
 import           Data.Char      (toLower)
 import           Data.List      (intercalate)
+import           Data.Maybe     (fromJust)
 import qualified GG.State       as S
-import           Libgit2        (IterResult (..), OID, Repository, Revwalk,
-                                 Signature (..), commitAuthor, commitLookup,
-                                 commitSummary, libgit2Init, newOID, oidToStrS,
-                                 referenceShorthand, repositoryHead,
-                                 repositoryOpenExt, repositoryOpenNoFlags,
-                                 revwalkNew, revwalkNext, revwalkPushHead)
+import           Libgit2        (Commit, Reference, Repository, Signature (..),
+                                 commitAuthor, commitId, commitLookup,
+                                 commitParent, commitParentcount, commitSummary,
+                                 libgit2Init, oidToStrS, referenceResolve,
+                                 referenceShorthand, referenceTarget,
+                                 repositoryHead, repositoryOpenExt,
+                                 repositoryOpenNoFlags)
 import           System.Exit    (ExitCode (..))
 import           System.Process (readCreateProcessWithExitCode, shell)
 
-readNCommits :: Int -> Repository -> Revwalk -> IO [S.Commit]
-readNCommits n repo revwalk = do
-  oid <- newOID
-  loop 0 oid []
+readCommit :: Commit -> IO S.Commit
+readCommit commit = do
+  oid <- commitId commit
+  oidStr <- oidToStrS oid
+  summary <- commitSummary commit
+  author <- commitAuthor commit
+  pure $ S.Commit oidStr summary (signatureName author) (signatureEmail author) (signatureWhen author)
+
+readNCommits :: Int -> Commit -> IO ([Commit], Commit)
+readNCommits n leaf = loop 0 leaf []
   where
-    loop :: Int -> OID -> [S.Commit] -> IO [S.Commit]
-    loop i oid acc =
+    loop :: Int -> Commit -> [Commit] -> IO ([Commit], Commit)
+    loop i c acc =
       if i == n
-        then pure $ reverse acc
+        then pure (reverse acc, c)
         else do
-          ir <- revwalkNext oid revwalk
-          case ir of
-            IterHasMore -> do
-              oidStr <- oidToStrS oid
-              commit <- commitLookup repo oid
-              summary <- commitSummary commit
-              author <- commitAuthor commit
-              let c = S.Commit oidStr summary (signatureName author) (signatureEmail author) (signatureWhen author)
-              loop (i + 1) oid (c : acc)
-            IterOver -> pure $ reverse acc
+          parentCount <- commitParentcount c
+          if parentCount == 0
+            then pure (reverse acc, c)
+            else do
+              commit <- commitParent c 0
+              loop (i + 1) commit (commit : acc)
 
 readRepository :: IO Repository
 readRepository = do
   _ <- libgit2Init
   repositoryOpenExt "." repositoryOpenNoFlags ""
 
-readCommits :: Repository -> IO (Revwalk, String)
-readCommits repo = do
-  revwalk <- revwalkNew repo
-  revwalkPushHead revwalk
+refToCommit :: Repository -> Reference -> IO Commit
+refToCommit repo ref = do
+  ref' <- referenceResolve ref
+  oid <- fromJust <$> referenceTarget ref'
+  commitLookup repo oid
+
+readRepoState :: Repository -> IO (String, Commit)
+readRepoState repo = do
   headRef <- repositoryHead repo
   branch <- referenceShorthand headRef
-  pure (revwalk, branch)
+  commit <- refToCommit repo headRef
+  pure (branch, commit)
 
 system :: String -> IO ExitCode
 system cmd = do

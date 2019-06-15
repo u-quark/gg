@@ -1,5 +1,6 @@
 module Libgit2.Commit (
     commitLookup
+  , commitId
   , commitMessageEncoding
   , commitMessage
   , commitSummary
@@ -7,6 +8,8 @@ module Libgit2.Commit (
   , commitTime
   , commitAuthor
   , commitCommitter
+  , commitParentcount
+  , commitParent
 )
 
 where
@@ -25,6 +28,8 @@ import Libgit2.Utils (defaultPeekCString, errorPeekCString)
 {#context lib="git2" prefix="git_"#}
 
 {#fun unsafe commit_lookup as commitLookup { alloca- `Commit' peekNewCommit*, `Repository', `OID' } -> `Int' checkReturnCode*-#}
+
+{#fun unsafe commit_id as commitId { `Commit' } -> `OID'#}
 
 nullIsUTF8PeekCString :: CString -> IO String
 nullIsUTF8PeekCString = defaultPeekCString "UTF-8"
@@ -56,3 +61,7 @@ commitTime commit = do
 {#fun unsafe commit_committer as commitCommitter { `Commit' } -> `Signature' peek*#}
 
 {#fun unsafe commit_author as commitAuthor { `Commit' } -> `Signature' peek*#}
+
+{#fun unsafe commit_parentcount as commitParentcount { `Commit' } -> `Int'#}
+
+{#fun unsafe commit_parent as commitParent { alloca- `Commit' peekNewCommit*, `Commit', `Int' } -> `Int' checkReturnCode*-#}

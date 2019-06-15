@@ -12,22 +12,23 @@ import           Brick                  (App (..), AttrMap, AttrName,
                                          neverShowCursor, on, padBottom,
                                          padRight, str, withAttr, (<+>), (<=>))
 import qualified Brick.Widgets.List     as L
-import           Control.Lens           (over, set, to, (^.))
+import           Control.Lens           (mapMOf, to, (^.))
 import           Control.Monad          (void)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Maybe             (fromMaybe)
 import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime)
 import           Data.Vector            (toList)
-import qualified Data.Vector            as Vec
 import           GG.Repo                (Action, doRebase, fixupCommit,
                                          moveCommitDown, moveCommitUp,
-                                         readCommits, readNCommits)
+                                         readCommit, readNCommits,
+                                         readRepoState)
 import           GG.State               (Commit (..), Name (..), State (..),
-                                         authorEmail, authorName, authorWhen,
-                                         branchName, commitList, oid,
-                                         repository, revwalk, summary,
-                                         updateCommitsPos, updateRepoState)
+                                         addMoreCommits, authorEmail,
+                                         authorName, authorWhen, branchName,
+                                         commitList, contCommit, oid,
+                                         repository, summary, updateCommitsPos,
+                                         updateRepoState)
 import qualified Graphics.Vty           as V
 
 data Event
@@ -51,18 +52,19 @@ handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doAction moveCommitUp s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doAction moveCommitDown s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doAction fixupCommit s
 handleEvent s (VtyEvent ev) = do
-  l <- liftIO $ checkNeedsMoreCommits (s ^. commitList) s
-  l' <- L.handleListEventVi L.handleListEvent ev l
-  continue $ set commitList l' s
+  s' <- liftIO $ checkNeedsMoreCommits s
+  s'' <- mapMOf commitList (L.handleListEventVi L.handleListEvent ev) s'
+  continue s''
 handleEvent s _ = continue s
 
-checkNeedsMoreCommits :: L.List Name Commit -> State -> IO (L.List Name Commit)
-checkNeedsMoreCommits l s =
-  if ((l ^. L.listElementsL . to length) - (l ^. L.listSelectedL . to (fromMaybe 0))) < 500
+checkNeedsMoreCommits :: State -> IO State
+checkNeedsMoreCommits s =
+  if ((s ^. commitList . L.listElementsL . to length) - (s ^. commitList . L.listSelectedL . to (fromMaybe 0))) < 500
     then do
-      moreCommits <- readNCommits 500 (s ^. repository) (s ^. revwalk)
-      pure $ over L.listElementsL (Vec.++ Vec.fromList moreCommits) l
-    else pure l
+      (moreCommits, contCommit') <- readNCommits 500 (s ^. contCommit)
+      moreCommitsState <- mapM readCommit moreCommits
+      pure $ addMoreCommits moreCommitsState contCommit' s
+    else pure s
 
 doAction :: Action -> State -> EventM Name (Next State)
 doAction a s = do
@@ -73,9 +75,10 @@ doAction a s = do
       newPosM <- doRebase commitHashes pos a
       case newPosM of
         Just newPos -> do
-          (revw, branch) <- readCommits $ s ^. repository
-          commits <- readNCommits (pos + 500) (s ^. repository) revw
-          pure $ (updateRepoState revw branch commits . updateCommitsPos newPos) s
+          (branch, headCommit) <- readRepoState $ s ^. repository
+          (tailCommits, contCommit') <- readNCommits (pos + 500) headCommit
+          moreCommitsState <- mapM readCommit (headCommit : tailCommits)
+          pure $ (updateRepoState contCommit' branch moreCommitsState . updateCommitsPos newPos) s
         Nothing -> pure s
   continue s'
 

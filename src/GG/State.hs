@@ -3,11 +3,11 @@
 module GG.State where
 
 import qualified Brick.Widgets.List as L
-import           Control.Lens       (set)
+import           Control.Lens       (over, set)
 import           Control.Lens.TH    (makeLenses)
 import           Data.Time          (ZonedTime)
 import qualified Data.Vector        as Vec
-import           Libgit2            (Repository, Revwalk)
+import qualified Libgit2            as G
 
 data Name =
   CommitList
@@ -26,20 +26,24 @@ data State =
   State
     { _commitList :: L.List Name Commit
     , _branchName :: String
-    , _repository :: Repository
-    , _revwalk    :: Revwalk
+    , _repository :: G.Repository
+    , _contCommit :: G.Commit
     }
 
 makeLenses ''Commit
 
 makeLenses ''State
 
-initState :: Repository -> Revwalk -> String -> [Commit] -> State
-initState repo revw branch l = State (L.list CommitList (Vec.fromList l) 1) branch repo revw
+initState :: G.Repository -> G.Commit -> String -> [Commit] -> State
+initState repo commit branch l = State (L.list CommitList (Vec.fromList l) 1) branch repo commit
 
-updateRepoState :: Revwalk -> String -> [Commit] -> State -> State
-updateRepoState revw branch l =
-  set (commitList . L.listElementsL) (Vec.fromList l) . set revwalk revw . set branchName branch
+updateRepoState :: G.Commit -> String -> [Commit] -> State -> State
+updateRepoState commit branch l =
+  set (commitList . L.listElementsL) (Vec.fromList l) . set contCommit commit . set branchName branch
+
+addMoreCommits :: [Commit] -> G.Commit -> State -> State
+addMoreCommits moreCommits newContCommit =
+  over (commitList . L.listElementsL) (Vec.++ Vec.fromList moreCommits) . set contCommit newContCommit
 
 updateCommitsPos :: Int -> State -> State
 updateCommitsPos pos = set (commitList . L.listSelectedL) (Just pos)
