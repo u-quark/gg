@@ -3,11 +3,13 @@ module Libgit2.OID (
   , newOID
   , withOID
   , oidToStrS
+  , _oidFromCString
 )
 
 where
 
-import Foreign (Storable(..), mallocForeignPtr)
+import Foreign (Ptr, Storable(..), mallocForeignPtr)
+import Foreign.C (CUChar)
 
 #include "git2/oid.h"
 
@@ -27,3 +29,14 @@ newOID = do
     pure $ OID p
 
 {#fun unsafe oid_tostr_s as oidToStrS { `OID' } -> `String' #}
+
+{#fun pure oid_tostr_s as _showOID { `OID' } -> `String' #}
+
+instance Show OID where
+  show = _showOID
+
+_oidFromCString :: Ptr CUChar -> IO OID
+_oidFromCString str = do
+  oid <- newOID
+  withOID oid $ flip {#call unsafe oid_fromraw #} str
+  pure oid

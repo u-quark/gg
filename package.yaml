@@ -47,6 +47,8 @@ library:
     - Libgit2.Commit
     - Libgit2.Revwalk
     - Libgit2.Refs
+    - Libgit2.Diff
+    - Libgit2.StrArray
 
 executables:
   gg:

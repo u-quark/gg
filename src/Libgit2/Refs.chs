@@ -8,7 +8,7 @@ module Libgit2.Refs
 {#import Libgit2.Types#}
 {#import Libgit2.OID#}
 
-import Foreign (alloca)
+import Foreign (alloca, Ptr)
 import Libgit2.Errors (checkReturnCode)
 import Libgit2.Utils (maybeNullPeek, fprCtor_)
 
@@ -18,7 +18,7 @@ import Libgit2.Utils (maybeNullPeek, fprCtor_)
 
 {#fun unsafe reference_shorthand as referenceShorthand { `Reference' } -> `String'#}
 
-maybeNullOID :: C2HSImp.Ptr OID -> IO (Maybe OID)
+maybeNullOID :: Ptr OID -> IO (Maybe OID)
 maybeNullOID = maybeNullPeek (fprCtor_ OID)
 
 {#fun unsafe reference_target as referenceTarget { `Reference' } -> `Maybe OID' maybeNullOID*#}

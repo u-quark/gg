@@ -11,10 +11,12 @@ module Libgit2.Utils
   , defaultPeekFCString
   , fprCtor_
   , IterResult(..)
+  , malloca
   ) where
 
-import           Foreign   (FinalizerPtr, ForeignPtr, Ptr, free, newForeignPtr,
-                            newForeignPtr_, nullPtr, peek)
+import           Foreign   (FinalizerPtr, ForeignPtr, Ptr, Storable, free,
+                            malloc, newForeignPtr, newForeignPtr_, nullPtr,
+                            peek)
 import           Foreign.C (CString, peekCString)
 
 peekNew :: (ForeignPtr a -> b) -> FinalizerPtr a -> Ptr (Ptr a) -> IO b
@@ -72,3 +74,6 @@ fprCtor_ ctor p = do
 data IterResult
   = IterHasMore
   | IterOver
+
+malloca :: Storable a => (Ptr a -> IO b) -> IO b
+malloca = (>>=) malloc

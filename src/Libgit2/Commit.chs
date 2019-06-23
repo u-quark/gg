@@ -10,6 +10,7 @@ module Libgit2.Commit (
   , commitCommitter
   , commitParentcount
   , commitParent
+  , commitTree
 )
 
 where
@@ -65,3 +66,5 @@ commitTime commit = do
 {#fun unsafe commit_parentcount as commitParentcount { `Commit' } -> `Int'#}
 
 {#fun unsafe commit_parent as commitParent { alloca- `Commit' peekNewCommit*, `Commit', `Int' } -> `Int' checkReturnCode*-#}
+
+{#fun unsafe commit_tree as commitTree { alloca- `Tree' peekNewTree*, `Commit' } -> `Int' checkReturnCode*-#}
