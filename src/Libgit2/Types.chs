@@ -29,6 +29,10 @@ module Libgit2.Types
   , peekNewDiff
   , diffFree
   , withDiff
+  , DiffStats(..)
+  , peekNewDiffStats
+  , diffStatsFree
+  , withDiffStats
   , DiffOption(..)
   , fromDiffOptions
   , diffNormal
@@ -71,8 +75,17 @@ module Libgit2.Types
   , DeltaType(..)
   , DiffFile(..)
   , DiffFilePtr
-  , DiffDelta
+  , DiffDelta(..)
   , DiffDeltaPtr
+  , DiffHunk(..)
+  , DiffHunkPtr
+  , DiffLine(..)
+  , DiffLinePtr
+  , DiffBinaryType(..)
+  , DiffBinaryFile(..)
+  , DiffBinaryFilePtr
+  , DiffBinary(..)
+  , DiffBinaryPtr
   , DiffSubmoduleIgnore(..)
   , DiffOptions(..)
   , withDiffOptions
@@ -81,11 +94,12 @@ module Libgit2.Types
 
 where
 
-import Foreign (Ptr, Storable, peek, castPtr, newForeignPtr_)
-import Foreign.C (peekCString, CUInt, CLong)
+import Foreign (Ptr, Storable, peek, newForeignPtr_, peekByteOff)
+import Foreign.C (peekCString, peekCStringLen, CUInt, CLong, castCCharToChar)
 import Data.Bits (Bits)
 import Data.Time.LocalTime (ZonedTime, minutesToTimeZone, utcToZonedTime)
 import Data.Time.Clock.POSIX (POSIXTime, posixSecondsToUTCTime)
+import Data.ByteString (ByteString, packCStringLen)
 import Libgit2.OID (OID, _oidFromCString)
 import Libgit2.Utils (peekNew)
 
@@ -152,6 +166,11 @@ peekNewTree = peekNew Tree treeFree
 
 peekNewDiff :: Ptr (Ptr Diff) -> IO Diff
 peekNewDiff = peekNew Diff diffFree
+
+{#pointer *diff_stats as DiffStats foreign finalizer diff_stats_free as diffStatsFree newtype#}
+
+peekNewDiffStats :: Ptr (Ptr DiffStats) -> IO DiffStats
+peekNewDiffStats = peekNew DiffStats diffStatsFree
 
 {#typedef git_off_t GitOff#}
 type GitOff = CLong
@@ -284,7 +303,7 @@ data DiffDelta = DiffDelta
   , diffDeltaSimilarity :: Similarity
   , diffDeltaNFiles :: Int
   , diffDeltaOldFile :: DiffFile
-  , diffDeltaNewFIle :: DiffFile
+  , diffDeltaNewFile :: DiffFile
 } deriving (Show)
 {#pointer *diff_delta as DiffDeltaPtr -> DiffDelta#}
 instance Storable DiffDelta where
@@ -295,10 +314,92 @@ instance Storable DiffDelta where
     flags <- DiffFlags <$> ({#get diff_delta->flags #} p)
     similarity <- (Similarity . fromIntegral) <$> ({#get diff_delta->similarity #} p)
     nFiles <- fromIntegral <$> ({#get diff_delta->nfiles #} p)
-    oldFile <- peek =<< castPtr <$> ({#get diff_delta->old_file #} p)
-    newFile <- peek =<< castPtr <$> ({#get diff_delta->new_file #} p)
+    oldFile <- peekByteOff p {#offsetof diff_delta->old_file #}
+    newFile <- peekByteOff p {#offsetof diff_delta->new_file #}
     pure $ DiffDelta status flags similarity nFiles oldFile newFile
   poke _ = error "Can't poke DiffDelta"
+
+data DiffHunk = DiffHunk
+  { diffHunkOldStart :: Int
+  , diffHunkOldLines :: Int
+  , diffHunkNewStart :: Int
+  , diffHunkNewLines :: Int
+  , diffHunkHeader :: String
+} deriving (Show)
+{#pointer *diff_hunk as DiffHunkPtr -> DiffHunk#}
+instance Storable DiffHunk where
+  sizeOf _ = {#sizeof diff_hunk#}
+  alignment _ = {#alignof diff_hunk#}
+  peek p = do
+    oldStart <- fromIntegral <$> ({#get diff_hunk->old_start #} p)
+    oldLines <- fromIntegral <$> ({#get diff_hunk->old_lines #} p)
+    newStart <- fromIntegral <$> ({#get diff_hunk->new_start #} p)
+    newLines <- fromIntegral <$> ({#get diff_hunk->new_lines #} p)
+    header <- peekCString =<< ({#get diff_hunk->header #} p)
+    pure $ DiffHunk oldStart oldLines newStart newLines header
+  poke _ = error "Can't poke DiffHunk"
+
+data DiffLine = DiffLine
+  { diffLineOrigin :: Char
+  , diffLineOldLineno :: Int
+  , diffLineNewLineno :: Int
+  , diffLineNumLines :: Int
+  , diffLineContent :: String
+  , diffLineContentOffset :: Int
+} deriving (Show)
+{#pointer *diff_line as DiffLinePtr -> DiffLine#}
+instance Storable DiffLine where
+  sizeOf _ = {#sizeof diff_line#}
+  alignment _ = {#alignof diff_line#}
+  peek p = do
+    origin <- castCCharToChar <$> ({#get diff_line->origin #} p)
+    oldLineno <- fromIntegral <$> ({#get diff_line->old_lineno #} p)
+    newLineno <- fromIntegral <$> ({#get diff_line->new_lineno #} p)
+    numLines <- fromIntegral <$> ({#get diff_line->num_lines #} p)
+    contentLen <- fromIntegral <$> ({#get diff_line->content_len #} p)
+    content <- do
+       str <- ({#get diff_line->content #} p)
+       peekCStringLen (str, contentLen)
+    contentOffset <- fromIntegral <$> ({#get diff_line->content_offset #} p)
+    pure $ DiffLine origin oldLineno newLineno numLines content contentOffset
+  poke _ = error "Can't poke DiffLine"
+
+{#enum diff_binary_t as DiffBinaryType {underscoreToCase, upcaseFirstLetter} deriving (Eq, Show)#}
+
+data DiffBinaryFile = DiffBinaryFile
+  { diffBinaryFileType :: DiffBinaryType
+  , diffBinaryFileData :: ByteString
+  , diffBinaryFileInflatedLen :: Int
+} deriving (Show)
+{#pointer *diff_binary_file as DiffBinaryFilePtr -> DiffBinaryFile#}
+instance Storable DiffBinaryFile where
+  sizeOf _ = {#sizeof diff_binary_file#}
+  alignment _ = {#alignof diff_binary_file#}
+  peek p = do
+    type_ <- (toEnum . fromIntegral) <$> ({#get diff_binary_file->type #} p)
+    dataLen <- fromIntegral <$> ({#get diff_binary_file->datalen #} p)
+    data_ <- do
+       str <- ({#get diff_binary_file->data #} p)
+       packCStringLen (str, dataLen)
+    inflatedLen <- fromIntegral <$> ({#get diff_binary_file->inflatedlen #} p)
+    pure $ DiffBinaryFile type_ data_ inflatedLen
+  poke _ = error "Can't poke DiffBinaryFile"
+
+data DiffBinary = DiffBinary
+  { diffBinaryContainsData :: Bool
+  , diffBinaryOldFile :: DiffBinaryFile
+  , diffBinaryNewFile :: DiffBinaryFile
+} deriving (Show)
+{#pointer *diff_binary as DiffBinaryPtr -> DiffBinary#}
+instance Storable DiffBinary where
+  sizeOf _ = {#sizeof diff_binary#}
+  alignment _ = {#alignof diff_binary#}
+  peek p = do
+    containsData <- (== 1) <$> ({#get diff_binary->contains_data #} p)
+    oldFile <- peekByteOff p {#offsetof diff_binary->old_file #}
+    newFile <- peekByteOff p {#offsetof diff_binary->new_file #}
+    pure $ DiffBinary containsData oldFile newFile
+  poke _ = error "Can't poke DiffBinary"
 
 {#enum submodule_ignore_t as DiffSubmoduleIgnore {underscoreToCase, upcaseFirstLetter} deriving (Eq, Show)#}
 

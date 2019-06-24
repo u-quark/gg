@@ -12,12 +12,15 @@ module Libgit2.Utils
   , fprCtor_
   , IterResult(..)
   , malloca
+  , withFunPtr
+  , withFunPtrM
   ) where
 
-import           Foreign   (FinalizerPtr, ForeignPtr, Ptr, Storable, free,
-                            malloc, newForeignPtr, newForeignPtr_, nullPtr,
-                            peek)
-import           Foreign.C (CString, peekCString)
+import           Control.Monad (when)
+import           Foreign       (FinalizerPtr, ForeignPtr, FunPtr, Ptr, Storable,
+                                free, freeHaskellFunPtr, malloc, newForeignPtr,
+                                newForeignPtr_, nullFunPtr, nullPtr, peek)
+import           Foreign.C     (CString, peekCString)
 
 peekNew :: (ForeignPtr a -> b) -> FinalizerPtr a -> Ptr (Ptr a) -> IO b
 peekNew haskellConstructor cDestructor ptr = do
@@ -77,3 +80,20 @@ data IterResult
 
 malloca :: Storable a => (Ptr a -> IO b) -> IO b
 malloca = (>>=) malloc
+
+withFunPtr :: (f -> IO (FunPtr f')) -> f -> (FunPtr f' -> IO a) -> IO a
+withFunPtr wrapper function action = do
+  fp <- wrapper function
+  res <- action fp
+  freeHaskellFunPtr fp
+  return res
+
+withFunPtrM :: (f -> IO (FunPtr f')) -> Maybe f -> (FunPtr f' -> IO a) -> IO a
+withFunPtrM wrapper functionM action = do
+  fp <-
+    case functionM of
+      Just function -> wrapper function
+      Nothing       -> pure nullFunPtr
+  res <- action fp
+  when (fp /= nullFunPtr) (freeHaskellFunPtr fp)
+  return res
