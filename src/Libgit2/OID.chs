@@ -28,7 +28,7 @@ newOID = do
     p <- mallocForeignPtr
     pure $ OID p
 
-{#fun unsafe oid_tostr_s as oidToStrS { `OID' } -> `String' #}
+{#fun oid_tostr_s as oidToStrS { `OID' } -> `String' #}
 
 {#fun pure oid_tostr_s as _showOID { `OID' } -> `String' #}
 
@@ -38,5 +38,5 @@ instance Show OID where
 _oidFromCString :: Ptr CUChar -> IO OID
 _oidFromCString str = do
   oid <- newOID
-  withOID oid $ flip {#call unsafe oid_fromraw #} str
+  withOID oid $ flip {#call oid_fromraw #} str
   pure oid

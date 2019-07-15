@@ -16,11 +16,11 @@ import Libgit2.Utils (maybeNullPeek, fprCtor_)
 
 {#context lib="git2" prefix="git_"#}
 
-{#fun unsafe reference_shorthand as referenceShorthand { `Reference' } -> `String'#}
+{#fun reference_shorthand as referenceShorthand { `Reference' } -> `String'#}
 
 maybeNullOID :: Ptr OID -> IO (Maybe OID)
 maybeNullOID = maybeNullPeek (fprCtor_ OID)
 
-{#fun unsafe reference_target as referenceTarget { `Reference' } -> `Maybe OID' maybeNullOID*#}
+{#fun reference_target as referenceTarget { `Reference' } -> `Maybe OID' maybeNullOID*#}
 
-{#fun unsafe reference_resolve as referenceResolve {  alloca- `Reference' peekNewReference*, `Reference' } -> `Int' checkReturnCode*-#}
+{#fun reference_resolve as referenceResolve {  alloca- `Reference' peekNewReference*, `Reference' } -> `Int' checkReturnCode*-#}

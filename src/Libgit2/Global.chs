@@ -10,4 +10,4 @@ import Libgit2.Errors (intAndCheckReturnCode)
 
 {#context lib="git2" prefix="git_"#}
 
-{#fun unsafe libgit2_init as libgit2Init {} -> `Int' intAndCheckReturnCode*#}
+{#fun libgit2_init as libgit2Init {} -> `Int' intAndCheckReturnCode*#}

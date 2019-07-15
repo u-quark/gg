@@ -42,7 +42,7 @@ instance Storable Error where
 -- future compatibility as this call is deprecated and replaced with
 -- git_error_last() in later release of libgit2.
 --
-{#fun unsafe giterr_last as errorLast {} -> `Error' peek*#}
+{#fun giterr_last as errorLast {} -> `Error' peek*#}
 
 data Libgit2Exception = Libgit2Exception Error ErrorCode deriving (Eq)
 instance Exception Libgit2Exception

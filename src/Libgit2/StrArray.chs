@@ -30,4 +30,4 @@ instance Storable StrArray where
     ptrs <- newArray cstrings
     {#set strarray->strings #} p ptrs
 
-{#fun unsafe strarray_free as strArrayFree { `StrArrayPtr' } -> `()'#}
+{#fun strarray_free as strArrayFree { `StrArrayPtr' } -> `()'#}

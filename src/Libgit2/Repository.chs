@@ -25,7 +25,7 @@ import Libgit2.Errors (checkReturnCode)
 
 {#context lib="git2" prefix="git_"#}
 
-{#fun unsafe repository_open as repositoryOpen { alloca- `Repository' peekNewRepository*, `String' } -> `Int' checkReturnCode*-#}
+{#fun repository_open as repositoryOpen { alloca- `Repository' peekNewRepository*, `String' } -> `Int' checkReturnCode*-#}
 
 {#enum repository_open_flag_t as InternalOpenFlag {underscoreToCase, upcaseFirstLetter} with prefix = "GIT_REPOSITORY_" add prefix = "internal" deriving (Eq, Show)#}
 
@@ -50,6 +50,6 @@ repositoryOpenNoDotgit = fromOpenEnum InternalOpenNoDotgit
 repositoryOpenFromEnv :: RepositoryOpenFlags
 repositoryOpenFromEnv = fromOpenEnum InternalOpenFromEnv
 
-{#fun unsafe repository_open_ext as repositoryOpenExt { alloca- `Repository' peekNewRepository*, `String', fromRepositoryOpenFlags `RepositoryOpenFlags', `String' } -> `Int' checkReturnCode*-#}
+{#fun repository_open_ext as repositoryOpenExt { alloca- `Repository' peekNewRepository*, `String', fromRepositoryOpenFlags `RepositoryOpenFlags', `String' } -> `Int' checkReturnCode*-#}
 
-{#fun unsafe repository_head as repositoryHead { alloca- `Reference' peekNewReference*, `Repository' } -> `Int' checkReturnCode*-#}
+{#fun repository_head as repositoryHead { alloca- `Reference' peekNewReference*, `Repository' } -> `Int' checkReturnCode*-#}

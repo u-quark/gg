@@ -178,7 +178,7 @@ withDiffLineCbM = withFunPtrM wrapDiffLineCb
 diffOptionsVersion :: Int
 diffOptionsVersion = {#const GIT_DIFF_OPTIONS_VERSION#}
 
-{#fun unsafe diff_init_options as diffInitOptions { malloca- `DiffOptions' peekDiffOptions*, `Int' } -> `Int' checkReturnCode*-#}
+{#fun diff_init_options as diffInitOptions { malloca- `DiffOptions' peekDiffOptions*, `Int' } -> `Int' checkReturnCode*-#}
 
 diffDefaultOptions :: IO (DiffOptions)
 diffDefaultOptions = diffInitOptions diffOptionsVersion
@@ -225,16 +225,16 @@ pokeDiffOptionsOldPrefix = _pokeDiffOptions ({#set diff_options->old_prefix#}) n
 pokeDiffOptionsNewPrefix :: DiffOptions -> String -> IO ()
 pokeDiffOptionsNewPrefix = _pokeDiffOptions ({#set diff_options->new_prefix#}) newCString
 
-{#fun unsafe diff_tree_to_tree as diffTreeToTree { alloca- `Diff' peekNewDiff*, `Repository', `Tree', `Tree', `DiffOptions' } -> `Int' checkReturnCode*-#}
+{#fun diff_tree_to_tree as diffTreeToTree { alloca- `Diff' peekNewDiff*, `Repository', `Tree', `Tree', `DiffOptions' } -> `Int' checkReturnCode*-#}
 
-{#fun unsafe diff_num_deltas as diffNumDeltas { `Diff' } -> `Int'#}
+{#fun diff_num_deltas as diffNumDeltas { `Diff' } -> `Int'#}
 
-{#fun unsafe diff_get_stats as diffGetStats { alloca- `DiffStats' peekNewDiffStats*, `Diff' } -> `Int' checkReturnCode*-#}
+{#fun diff_get_stats as diffGetStats { alloca- `DiffStats' peekNewDiffStats*, `Diff' } -> `Int' checkReturnCode*-#}
 
-{#fun unsafe diff_stats_files_changed as diffStatsFilesChanged { `DiffStats' } -> `Int'#}
+{#fun diff_stats_files_changed as diffStatsFilesChanged { `DiffStats' } -> `Int'#}
 
-{#fun unsafe diff_stats_insertions as diffStatsInsertions { `DiffStats' } -> `Int'#}
+{#fun diff_stats_insertions as diffStatsInsertions { `DiffStats' } -> `Int'#}
 
-{#fun unsafe diff_stats_deletions as diffStatsDeletions { `DiffStats' } -> `Int'#}
+{#fun diff_stats_deletions as diffStatsDeletions { `DiffStats' } -> `Int'#}
 
-{#fun unsafe diff_foreach as diffForEach { `Diff', withDiffFileCb* `DiffFileCb', withDiffBinaryCbM* `Maybe DiffBinaryCb', withDiffHunkCbM* `Maybe DiffHunkCb', withDiffLineCbM* `Maybe DiffLineCb', withPayload* `Payload' } -> `Int'#}
+{#fun diff_foreach as diffForEach { `Diff', withDiffFileCb* `DiffFileCb', withDiffBinaryCbM* `Maybe DiffBinaryCb', withDiffHunkCbM* `Maybe DiffHunkCb', withDiffLineCbM* `Maybe DiffLineCb', withPayload* `Payload' } -> `Int'#}

@@ -46,10 +46,10 @@ sortTime = fromSortEnum InternalTime
 sortReverse :: SortFlags
 sortReverse = fromSortEnum InternalReverse
 
-{#fun unsafe revwalk_new as revwalkNew { alloca- `Revwalk' peekNewRevwalk*, `Repository' } -> `Int' checkReturnCode*-#}
+{#fun revwalk_new as revwalkNew { alloca- `Revwalk' peekNewRevwalk*, `Repository' } -> `Int' checkReturnCode*-#}
 
-{#fun unsafe revwalk_sorting as revwalkSorting { `Revwalk', fromSortFlags `SortFlags' } -> `()' #}
+{#fun revwalk_sorting as revwalkSorting { `Revwalk', fromSortFlags `SortFlags' } -> `()' #}
 
-{#fun unsafe revwalk_next as revwalkNext { `OID', `Revwalk' } -> `IterResult' checkReturnCodeIter*#}
+{#fun revwalk_next as revwalkNext { `OID', `Revwalk' } -> `IterResult' checkReturnCodeIter*#}
 
-{#fun unsafe revwalk_push_head as revwalkPushHead { `Revwalk' } -> `Int' checkReturnCode*-#}
+{#fun revwalk_push_head as revwalkPushHead { `Revwalk' } -> `Int' checkReturnCode*-#}
