@@ -4,19 +4,18 @@ import           GG.Repo     (readCommit, readNCommits, readRepoState,
                               readRepository)
 import qualified GG.State    as S
 import qualified GG.UI       as UI
-import           Libgit2     (Commit, DiffFile, DiffFileCb, DiffHunkCb,
-                              DiffLineCb, Repository, commitParent, commitTree,
-                              diffDefaultOptions, diffDeltaNewFile,
+import           Libgit2     (Commit, DiffBinary, DiffDelta, DiffFile, DiffHunk,
+                              DiffInfo, DiffLine, Repository, commitParent,
+                              commitTree, diffDefaultOptions, diffDeltaNewFile,
                               diffDeltaOldFile, diffFileFlags, diffFileId,
                               diffFileIdAbbrev, diffFileMode, diffFilePath,
-                              diffFileSize, diffForEach, diffGetStats,
-                              diffHunkHeader, diffHunkNewLines,
-                              diffHunkNewStart, diffHunkOldLines,
-                              diffHunkOldStart, diffLineContent,
-                              diffLineNewLineno, diffLineOldLineno,
-                              diffLineOrigin, diffNumDeltas, diffStatsDeletions,
-                              diffStatsFilesChanged, diffStatsInsertions,
-                              diffTreeToTree, nullPayload)
+                              diffFileSize, diffGetStats, diffHunkHeader,
+                              diffHunkNewLines, diffHunkNewStart,
+                              diffHunkOldLines, diffHunkOldStart, diffInfo,
+                              diffLineContent, diffLineNewLineno,
+                              diffLineOldLineno, diffLineOrigin, diffNumDeltas,
+                              diffStatsDeletions, diffStatsFilesChanged,
+                              diffStatsInsertions, diffTreeToTree)
 import           Text.Printf (printf)
 
 showCommitDiff :: Repository -> Commit -> IO ()
@@ -33,8 +32,11 @@ showCommitDiff repo commit = do
   insertions <- diffStatsInsertions diffStats
   deletions <- diffStatsDeletions diffStats
   putStrLn $ "Files changed: " <> show changed <> " insertions: " <> show insertions <> " deletions: " <> show deletions
-  _ <- diffForEach diff printFileDiff Nothing (Just printHunkDiff) (Just printLineDiff) nullPayload
-  pure ()
+  diffInfo_ <- diffInfo diff
+  printDiffInfo diffInfo_
+
+printDiffInfo :: DiffInfo -> IO ()
+printDiffInfo = mapM_ printFileDiff
 
 printDiffFile :: DiffFile -> IO ()
 printDiffFile df = do
@@ -52,17 +54,16 @@ printDiffFile df = do
       , show $ diffFileIdAbbrev df
       ]
 
-printFileDiff :: DiffFileCb
-printFileDiff delta progress _payload = do
-  putStrLn $ "Progress: " <> show (100 * progress) <> "%"
+printFileDiff :: (DiffDelta, ([(DiffHunk, [DiffLine])], [DiffBinary])) -> IO ()
+printFileDiff (delta, (hunks, _binaries)) = do
   putStr "--- a/"
   printDiffFile $ diffDeltaOldFile delta
   putStr "+++ b/"
   printDiffFile $ diffDeltaNewFile delta
-  pure 0
+  mapM_ printHunkDiff hunks
 
-printHunkDiff :: DiffHunkCb
-printHunkDiff _delta hunk _payload = do
+printHunkDiff :: (DiffHunk, [DiffLine]) -> IO ()
+printHunkDiff (hunk, lines_) = do
   putStrLn $
     concat
       [ "@@ -"
@@ -76,10 +77,10 @@ printHunkDiff _delta hunk _payload = do
       , " @@ "
       , diffHunkHeader hunk
       ]
-  pure 0
+  mapM_ printLineDiff lines_
 
-printLineDiff :: DiffLineCb
-printLineDiff _delta _hunk line _payload = do
+printLineDiff :: DiffLine -> IO ()
+printLineDiff line =
   case diffLineOrigin line of
     c
       | c == ' ' || c == '=' ->
@@ -96,7 +97,6 @@ printLineDiff _delta _hunk line _payload = do
       | c == '-' || c == '<' ->
         printf "%c%4d     : %s" (diffLineOrigin line) (diffLineOldLineno line) (diffLineContent line)
     _ -> error "Unknown line origin"
-  pure 0
 
 main :: IO ()
 main = do

@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Libgit2.Utils
   ( peekNew
   , peekF
@@ -14,9 +16,12 @@ module Libgit2.Utils
   , malloca
   , withFunPtr
   , withFunPtrM
+  , alterBy
+  , alterAList
   ) where
 
 import           Control.Monad (when)
+import           Data.Maybe    (maybeToList)
 import           Foreign       (FinalizerPtr, ForeignPtr, FunPtr, Ptr, Storable,
                                 free, freeHaskellFunPtr, malloc, newForeignPtr,
                                 newForeignPtr_, nullFunPtr, nullPtr, peek)
@@ -97,3 +102,14 @@ withFunPtrM wrapper functionM action = do
   res <- action fp
   when (fp /= nullFunPtr) (freeHaskellFunPtr fp)
   return res
+
+alterBy :: (a -> Bool) -> (Maybe a -> Maybe a) -> [a] -> [a]
+alterBy p f =
+  \case
+    (x:xs)
+      | p x -> maybeToList (f (Just x)) ++ xs
+    (x:xs) -> x : alterBy p f xs
+    [] -> maybeToList (f Nothing)
+
+alterAList :: Eq k => (Maybe a -> Maybe a) -> k -> [(k, a)] -> [(k, a)]
+alterAList f k = alterBy ((==) k . fst) (fmap ((,) k) . f . fmap snd)

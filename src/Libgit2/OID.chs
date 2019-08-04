@@ -21,6 +21,9 @@ instance Storable OID where
     peek _ = error "Can't peek OID"
     poke _ = error "Can't poke OID"
 
+instance Eq OID where
+    (==) = _equalOID
+
 {#pointer *oid as OID foreign newtype#}
 
 newOID :: IO OID
@@ -31,6 +34,8 @@ newOID = do
 {#fun oid_tostr_s as oidToStrS { `OID' } -> `String' #}
 
 {#fun pure oid_tostr_s as _showOID { `OID' } -> `String' #}
+
+{#fun pure oid_equal as _equalOID { `OID', `OID' } -> `Bool' #}
 
 instance Show OID where
   show = _showOID

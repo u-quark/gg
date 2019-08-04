@@ -276,7 +276,7 @@ data DiffFile = DiffFile
   , diffFileFlags :: DiffFlags
   , diffFileMode :: Filemode
   , diffFileIdAbbrev :: Int
-} deriving (Show)
+} deriving (Show, Eq)
 {#pointer *diff_file as DiffFilePtr -> DiffFile#}
 instance Storable DiffFile where
   sizeOf _ = {#sizeof diff_file#}
@@ -291,7 +291,7 @@ instance Storable DiffFile where
     pure $ DiffFile id' path size flags mode idAbbrev
   poke _ = error "Can't poke DiffFile"
 
-newtype Similarity = Similarity Int deriving (Num, Show)
+newtype Similarity = Similarity Int deriving (Num, Show, Eq)
 instance Bounded Similarity
   where
     minBound = 0
@@ -304,7 +304,7 @@ data DiffDelta = DiffDelta
   , diffDeltaNFiles :: Int
   , diffDeltaOldFile :: DiffFile
   , diffDeltaNewFile :: DiffFile
-} deriving (Show)
+} deriving (Show, Eq)
 {#pointer *diff_delta as DiffDeltaPtr -> DiffDelta#}
 instance Storable DiffDelta where
   sizeOf _ = {#sizeof diff_delta#}
@@ -325,7 +325,7 @@ data DiffHunk = DiffHunk
   , diffHunkNewStart :: Int
   , diffHunkNewLines :: Int
   , diffHunkHeader :: String
-} deriving (Show)
+} deriving (Show, Eq)
 {#pointer *diff_hunk as DiffHunkPtr -> DiffHunk#}
 instance Storable DiffHunk where
   sizeOf _ = {#sizeof diff_hunk#}

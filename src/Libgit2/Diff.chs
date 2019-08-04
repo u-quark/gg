@@ -13,6 +13,7 @@ module Libgit2.Diff
   , DiffBinaryCb
   , DiffHunkCb
   , DiffLineCb
+  , DiffInfo
   , wrapDiffNotifyCb
   , wrapDiffProgressCb
   , wrapDiffFileCb
@@ -40,15 +41,18 @@ module Libgit2.Diff
   , diffStatsInsertions
   , diffStatsDeletions
   , diffForEach
+  , diffInfo
   ) where
 
 {#import Libgit2.Types#}
 
+import Data.IORef (modifyIORef, newIORef, readIORef)
+import Data.Maybe (fromMaybe)
 import Foreign (Ptr, FunPtr, newForeignPtr_, peek, withForeignPtr, poke, plusPtr, alloca, nullPtr)
 import Foreign.C (CString, CInt(..), CFloat(..), peekCString, newCString)
 import Libgit2.StrArray (StrArray(..))
 import Libgit2.Errors (checkReturnCode)
-import Libgit2.Utils (malloca, withFunPtr, withFunPtrM)
+import Libgit2.Utils (malloca, withFunPtr, withFunPtrM, alterAList)
 
 
 #include "git2/diff.h"
@@ -238,3 +242,43 @@ pokeDiffOptionsNewPrefix = _pokeDiffOptions ({#set diff_options->new_prefix#}) n
 {#fun diff_stats_deletions as diffStatsDeletions { `DiffStats' } -> `Int'#}
 
 {#fun diff_foreach as diffForEach { `Diff', withDiffFileCb* `DiffFileCb', withDiffBinaryCbM* `Maybe DiffBinaryCb', withDiffHunkCbM* `Maybe DiffHunkCb', withDiffLineCbM* `Maybe DiffLineCb', withPayload* `Payload' } -> `Int'#}
+
+type DiffInfo = [(DiffDelta, ([(DiffHunk, [DiffLine])], [DiffBinary]))]
+
+type DeltaInfo = ([HunkInfo], [DiffBinary])
+
+type HunkInfo = (DiffHunk, [DiffLine])
+
+diffInfo :: Diff -> IO DiffInfo
+diffInfo diff = do
+  ref <- newIORef []
+  let collectDeltaDiff delta _progress _payload = do
+        modifyIORef ref (appendDelta delta)
+        pure 0
+  let collectLineDiff delta hunk line _payload = do
+        modifyIORef ref (modifyDeltaHunks delta hunk line)
+        pure 0
+  let collectBinaryDiff delta binary _payload = do
+        modifyIORef ref (modifyDeltaBinary delta binary)
+        pure 0
+  _ <- diffForEach diff collectDeltaDiff (Just collectBinaryDiff) Nothing (Just collectLineDiff) nullPayload
+  readIORef ref
+  where
+    appendAlterF :: a -> Maybe [a] -> Maybe [a]
+    appendAlterF v vsM = Just $ fromMaybe [] vsM ++ [v]
+    appendHunkLine :: DiffHunk -> DiffLine -> [HunkInfo] -> [HunkInfo]
+    appendHunkLine hunk line = alterAList (appendAlterF line) hunk
+    modifyWithDefaultAlterF :: (a -> a) -> a -> Maybe a -> Maybe a
+    modifyWithDefaultAlterF f d xM = Just $ f $ fromMaybe d xM
+    modifyDelta :: (DeltaInfo -> DeltaInfo) -> DiffDelta -> DiffInfo -> DiffInfo
+    modifyDelta f = alterAList (modifyWithDefaultAlterF f ([], []))
+    modifyDeltaInfoWithHunk :: DiffHunk -> DiffLine -> DeltaInfo -> DeltaInfo
+    modifyDeltaInfoWithHunk hunk line (hunks, binaries) = (appendHunkLine hunk line hunks, binaries)
+    modifyDeltaHunks :: DiffDelta -> DiffHunk -> DiffLine -> DiffInfo -> DiffInfo
+    modifyDeltaHunks delta hunk line = modifyDelta (modifyDeltaInfoWithHunk hunk line) delta
+    modifyDeltaInfoWithBinary :: DiffBinary -> DeltaInfo -> DeltaInfo
+    modifyDeltaInfoWithBinary binary (hunks, binaries) = (hunks, binaries ++ [binary])
+    modifyDeltaBinary :: DiffDelta -> DiffBinary -> DiffInfo -> DiffInfo
+    modifyDeltaBinary delta binary = modifyDelta (modifyDeltaInfoWithBinary binary) delta
+    appendDelta :: DiffDelta -> DiffInfo -> DiffInfo
+    appendDelta = modifyDelta id
