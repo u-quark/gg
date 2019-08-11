@@ -1,35 +1,36 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module GG.UI
   ( main
-  , Commit(..)
+  , Commit
   ) where
 
-import           Brick                  (App (..), AttrMap, AttrName,
-                                         BrickEvent (..), EventM, Next,
-                                         Padding (..), Widget, attrMap,
-                                         continue, customMain, fg, halt,
-                                         neverShowCursor, on, padBottom,
-                                         padRight, str, withAttr, (<+>), (<=>))
-import qualified Brick.Widgets.List     as L
-import           Control.Lens           (mapMOf, to, (^.))
-import           Control.Monad          (void)
-import           Control.Monad.IO.Class (liftIO)
-import           Data.Maybe             (fromMaybe)
-import           Data.Time              (ZonedTime, defaultTimeLocale,
-                                         formatTime)
-import           Data.Vector            (toList)
-import           GG.Repo                (Action, doRebase, fixupCommit,
-                                         moveCommitDown, moveCommitUp,
-                                         readCommit, readNCommits,
-                                         readRepoState)
-import           GG.State               (Commit (..), Name (..), State (..),
-                                         addMoreCommits, authorEmail,
-                                         authorName, authorWhen, branchName,
-                                         commitList, contCommit, oid,
-                                         repository, summary, updateCommitsPos,
-                                         updateRepoState)
-import qualified Graphics.Vty           as V
+import           Brick                        (App (..), AttrMap, AttrName,
+                                               BrickEvent (..), EventM, Next,
+                                               Padding (..), Widget, attrMap,
+                                               continue, customMain, fg, halt,
+                                               neverShowCursor, on, padBottom,
+                                               padRight, str, withAttr, (<+>),
+                                               (<=>))
+import qualified Brick.Widgets.List           as L
+import           Control.Lens                 (mapMOf, to, (^.))
+import           Control.Monad                (void)
+import           Control.Monad.IO.Class       (liftIO)
+import           Data.Generics.Product.Fields (field)
+import           Data.Maybe                   (fromMaybe)
+import           Data.Time                    (ZonedTime, defaultTimeLocale,
+                                               formatTime)
+import           Data.Vector                  (toList)
+import           GG.Repo                      (Action, doRebase, fixupCommit,
+                                               moveCommitDown, moveCommitUp,
+                                               readCommit, readNCommits,
+                                               readRepoState)
+import           GG.State                     (Commit, Name (..), State,
+                                               addMoreCommits, updateCommitsPos,
+                                               updateRepoState)
+import qualified Graphics.Vty                 as V
 
 data Event
 
@@ -53,15 +54,17 @@ handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doAction moveCommitDown s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doAction fixupCommit s
 handleEvent s (VtyEvent ev) = do
   s' <- liftIO $ checkNeedsMoreCommits s
-  s'' <- mapMOf commitList (L.handleListEventVi L.handleListEvent ev) s'
+  s'' <- mapMOf (field @"commitList") (L.handleListEventVi L.handleListEvent ev) s'
   continue s''
 handleEvent s _ = continue s
 
 checkNeedsMoreCommits :: State -> IO State
 checkNeedsMoreCommits s =
-  if ((s ^. commitList . L.listElementsL . to length) - (s ^. commitList . L.listSelectedL . to (fromMaybe 0))) < 500
+  if ((s ^. field @"commitList" . L.listElementsL . to length) -
+      (s ^. field @"commitList" . L.listSelectedL . to (fromMaybe 0))) <
+     500
     then do
-      (moreCommits, contCommit') <- readNCommits 500 (s ^. contCommit)
+      (moreCommits, contCommit') <- readNCommits 500 (s ^. field @"contCommit")
       moreCommitsState <- mapM readCommit moreCommits
       pure $ addMoreCommits moreCommitsState contCommit' s
     else pure s
@@ -70,12 +73,12 @@ doAction :: Action -> State -> EventM Name (Next State)
 doAction a s = do
   s' <-
     liftIO $ do
-      let commitHashes = map _oid (s ^. commitList . L.listElementsL . to toList)
-      let pos = s ^. commitList . L.listSelectedL . to (fromMaybe 0)
+      let commitHashes = map (^. field @"oid") (s ^. field @"commitList" . L.listElementsL . to toList)
+      let pos = s ^. field @"commitList" . L.listSelectedL . to (fromMaybe 0)
       newPosM <- doRebase commitHashes pos a
       case newPosM of
         Just newPos -> do
-          (branch, headCommit) <- readRepoState $ s ^. repository
+          (branch, headCommit) <- readRepoState $ s ^. field @"repository"
           (tailCommits, contCommit') <- readNCommits (pos + 500) headCommit
           moreCommitsState <- mapM readCommit (headCommit : tailCommits)
           pure $ (updateRepoState contCommit' branch moreCommitsState . updateCommitsPos newPos) s
@@ -105,15 +108,18 @@ formatOid = take 8
 
 drawCommit :: Bool -> Commit -> Widget Name
 drawCommit _selected c =
-  withAttr oidAttr (str $ formatOid (c ^. oid)) <+> str " " <+> str (c ^. summary) <+> padRight Max (str " ") <+>
-  withAttr authorAttr (str ((c ^. authorName) <> " <" <> (c ^. authorEmail) <> ">")) <+>
+  withAttr oidAttr (str $ formatOid (c ^. field @"oid")) <+> str " " <+> str (c ^. field @"summary") <+>
+  padRight Max (str " ") <+>
+  withAttr authorAttr (str ((c ^. field @"authorName") <> " <" <> (c ^. field @"authorEmail") <> ">")) <+>
   str " " <+>
-  withAttr dateAttr (str $ myFormatTime (c ^. authorWhen))
+  withAttr dateAttr (str $ myFormatTime (c ^. field @"authorWhen"))
 
 drawUI :: State -> [Widget Name]
 drawUI s =
-  [ padBottom Max (L.renderList drawCommit True (s ^. commitList)) <=>
-    withAttr statusBarAttr (withAttr statusBranchAttr (str ("On " <> s ^. branchName)) <+> padRight Max (str " "))
+  [ padBottom Max (L.renderList drawCommit True (s ^. field @"commitList")) <=>
+    withAttr
+      statusBarAttr
+      (withAttr statusBranchAttr (str ("On " <> s ^. field @"branchName")) <+> padRight Max (str " "))
   ]
 
 rgbColor :: Integer -> Integer -> Integer -> V.Color
