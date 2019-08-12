@@ -29,6 +29,7 @@ dependencies:
 - vector
 - process
 - bytestring
+- MissingH
 
 library:
   source-dirs: src

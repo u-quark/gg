@@ -74,6 +74,7 @@ module Libgit2.Types
   , Filemode(..)
   , DeltaType(..)
   , DiffFile(..)
+  , Similarity(..)
   , DiffFilePtr
   , DiffDelta(..)
   , DiffDeltaPtr
@@ -90,6 +91,27 @@ module Libgit2.Types
   , DiffOptions(..)
   , withDiffOptions
   , peekDiffOptions
+  , DiffFindFlag(..)
+  , fromDiffFindFlags
+  , diffFindByConfig
+  , diffFindRenames
+  , diffFindRenamesFromRewrites
+  , diffFindCopies
+  , diffFindCopiesFromUnmodified
+  , diffFindRewrites
+  , diffBreakRewrites
+  , diffFindAndBreakRewrites
+  , diffFindForUntracked
+  , diffFindAll
+  , diffFindIgnoreLeadingWhitespace
+  , diffFindIgnoreWhitespace
+  , diffFindDontIgnoreWhitespace
+  , diffFindExactMatchOnly
+  , diffBreakRewritesForRenamesOnly
+  , diffFindRemoveUnmodified
+  , DiffFindOptions(..)
+  , withDiffFindOptions
+  , peekDiffFindOptions
 )
 
 where
@@ -413,3 +435,57 @@ instance Storable DiffOptions where
 
 peekDiffOptions :: Ptr DiffOptions -> IO DiffOptions
 peekDiffOptions p = DiffOptions <$> (newForeignPtr_ p)
+
+{#enum diff_find_t as InternalDiffFindFlags {underscoreToCase, upcaseFirstLetter} with prefix = "GIT_DIFF_" add prefix = "internal_diff_" deriving (Eq, Show)#}
+
+newtype DiffFindFlag = DiffFindFlag CUInt deriving (Eq, Show, Bits)
+
+fromDiffFindFlags :: DiffFindFlag -> CUInt
+fromDiffFindFlags (DiffFindFlag options) = options
+
+fromDiffFindFlagsEnum :: InternalDiffFindFlags -> DiffFindFlag
+fromDiffFindFlagsEnum = DiffFindFlag . fromIntegral . fromEnum
+
+diffFindByConfig :: DiffFindFlag
+diffFindByConfig = fromDiffFindFlagsEnum InternalDiffFindByConfig
+diffFindRenames :: DiffFindFlag
+diffFindRenames = fromDiffFindFlagsEnum InternalDiffFindRenames
+diffFindRenamesFromRewrites :: DiffFindFlag
+diffFindRenamesFromRewrites = fromDiffFindFlagsEnum InternalDiffFindRenamesFromRewrites
+diffFindCopies :: DiffFindFlag
+diffFindCopies = fromDiffFindFlagsEnum InternalDiffFindCopies
+diffFindCopiesFromUnmodified :: DiffFindFlag
+diffFindCopiesFromUnmodified = fromDiffFindFlagsEnum InternalDiffFindCopiesFromUnmodified
+diffFindRewrites :: DiffFindFlag
+diffFindRewrites = fromDiffFindFlagsEnum InternalDiffFindRewrites
+diffBreakRewrites :: DiffFindFlag
+diffBreakRewrites = fromDiffFindFlagsEnum InternalDiffBreakRewrites
+diffFindAndBreakRewrites :: DiffFindFlag
+diffFindAndBreakRewrites = fromDiffFindFlagsEnum InternalDiffFindAndBreakRewrites
+diffFindForUntracked :: DiffFindFlag
+diffFindForUntracked = fromDiffFindFlagsEnum InternalDiffFindForUntracked
+diffFindAll :: DiffFindFlag
+diffFindAll = fromDiffFindFlagsEnum InternalDiffFindAll
+diffFindIgnoreLeadingWhitespace :: DiffFindFlag
+diffFindIgnoreLeadingWhitespace = fromDiffFindFlagsEnum InternalDiffFindIgnoreLeadingWhitespace
+diffFindIgnoreWhitespace :: DiffFindFlag
+diffFindIgnoreWhitespace = fromDiffFindFlagsEnum InternalDiffFindIgnoreWhitespace
+diffFindDontIgnoreWhitespace :: DiffFindFlag
+diffFindDontIgnoreWhitespace = fromDiffFindFlagsEnum InternalDiffFindDontIgnoreWhitespace
+diffFindExactMatchOnly :: DiffFindFlag
+diffFindExactMatchOnly = fromDiffFindFlagsEnum InternalDiffFindExactMatchOnly
+diffBreakRewritesForRenamesOnly :: DiffFindFlag
+diffBreakRewritesForRenamesOnly = fromDiffFindFlagsEnum InternalDiffBreakRewritesForRenamesOnly
+diffFindRemoveUnmodified :: DiffFindFlag
+diffFindRemoveUnmodified = fromDiffFindFlagsEnum InternalDiffFindRemoveUnmodified
+
+{#pointer *diff_find_options as DiffFindOptions foreign newtype#}  -- TODO: Add finalizer
+
+instance Storable DiffFindOptions where
+  sizeOf _ = {#sizeof diff_find_options#}
+  alignment _ = {#alignof diff_find_options#}
+  peek = error "Can't peek DiffFindOptions"
+  poke = error "Can't poke DiffFindOptions"
+
+peekDiffFindOptions :: Ptr DiffFindOptions -> IO DiffFindOptions
+peekDiffFindOptions p = DiffFindOptions <$> (newForeignPtr_ p)

@@ -3,6 +3,7 @@ module GG.Repo
   , readRepository
   , readRepoState
   , readCommit
+  , readCommitDiff
   , Action
   , doRebase
   , moveCommitUp
@@ -14,23 +15,54 @@ import           Data.Char      (toLower)
 import           Data.List      (intercalate)
 import           Data.Maybe     (fromJust)
 import qualified GG.State       as S
-import           Libgit2        (Commit, Reference, Repository, Signature (..),
-                                 commitAuthor, commitId, commitLookup,
-                                 commitParent, commitParentcount, commitSummary,
-                                 libgit2Init, oidToStrS, referenceResolve,
-                                 referenceShorthand, referenceTarget,
-                                 repositoryHead, repositoryOpenExt,
-                                 repositoryOpenNoFlags)
+import           Libgit2        (Commit, DiffInfo, DiffStats, OID, Reference,
+                                 Repository, Signature (..), commitAuthor,
+                                 commitBody, commitCommitter, commitId,
+                                 commitLookup, commitParent, commitParentcount,
+                                 commitSummary, commitTree, diffDefaultOptions,
+                                 diffFindAll, diffFindDefaultOptions,
+                                 diffFindSimilar, diffGetStats, diffInfo,
+                                 diffTreeToTree, libgit2Init, pokeDiffFindFlags,
+                                 referenceResolve, referenceShorthand,
+                                 referenceTarget, repositoryHead,
+                                 repositoryOpenExt, repositoryOpenNoFlags)
 import           System.Exit    (ExitCode (..))
 import           System.Process (readCreateProcessWithExitCode, shell)
 
 readCommit :: Commit -> IO S.Commit
 readCommit commit = do
   oid <- commitId commit
-  oidStr <- oidToStrS oid
   summary <- commitSummary commit
+  body <- commitBody commit
   author <- commitAuthor commit
-  pure $ S.Commit oidStr summary (signatureName author) (signatureEmail author) (signatureWhen author)
+  committer <- commitCommitter commit
+  pure $
+    S.Commit
+      oid
+      summary
+      body
+      (signatureName author)
+      (signatureEmail author)
+      (signatureWhen author)
+      (signatureName committer)
+      (signatureEmail committer)
+      (signatureWhen committer)
+      False
+
+readCommitDiff :: Repository -> OID -> IO (DiffStats, DiffInfo)
+readCommitDiff repo oid = do
+  commit <- commitLookup repo oid
+  tree <- commitTree commit
+  parentCommit <- commitParent commit 0
+  parentTree <- commitTree parentCommit
+  diffOptions <- diffDefaultOptions
+  diff <- diffTreeToTree repo parentTree tree diffOptions
+  diffFindOptions <- diffFindDefaultOptions
+  pokeDiffFindFlags diffFindOptions diffFindAll
+  diffFindSimilar diff diffFindOptions
+  diffStats <- diffGetStats diff
+  diffInfo_ <- diffInfo diff
+  pure (diffStats, diffInfo_)
 
 readNCommits :: Int -> Commit -> IO ([Commit], Commit)
 readNCommits n leaf = loop 0 leaf []

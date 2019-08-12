@@ -14,6 +14,8 @@ module Libgit2.Diff
   , DiffHunkCb
   , DiffLineCb
   , DiffInfo
+  , DeltaInfo
+  , HunkInfo
   , wrapDiffNotifyCb
   , wrapDiffProgressCb
   , wrapDiffFileCb
@@ -34,6 +36,15 @@ module Libgit2.Diff
   , pokeDiffOptionsMaxSize
   , pokeDiffOptionsOldPrefix
   , pokeDiffOptionsNewPrefix
+  , diffFindOptionsVersion
+  , diffFindInitOptions
+  , diffFindDefaultOptions
+  , pokeDiffFindFlags
+  , pokeDiffFindRenameThreshold
+  , pokeDiffFindRenameFromRewriteThreshold
+  , pokeDiffFindCopyThreshold
+  , pokeDiffFindBreakRewriteThreshold
+  , pokeDiffFindRenameLimit
   , diffTreeToTree
   , diffNumDeltas
   , diffGetStats
@@ -42,6 +53,7 @@ module Libgit2.Diff
   , diffStatsDeletions
   , diffForEach
   , diffInfo
+  , diffFindSimilar
   ) where
 
 {#import Libgit2.Types#}
@@ -235,15 +247,15 @@ pokeDiffOptionsNewPrefix = _pokeDiffOptions ({#set diff_options->new_prefix#}) n
 
 {#fun diff_get_stats as diffGetStats { alloca- `DiffStats' peekNewDiffStats*, `Diff' } -> `Int' checkReturnCode*-#}
 
-{#fun diff_stats_files_changed as diffStatsFilesChanged { `DiffStats' } -> `Int'#}
+{#fun pure diff_stats_files_changed as diffStatsFilesChanged { `DiffStats' } -> `Int'#}
 
-{#fun diff_stats_insertions as diffStatsInsertions { `DiffStats' } -> `Int'#}
+{#fun pure diff_stats_insertions as diffStatsInsertions { `DiffStats' } -> `Int'#}
 
-{#fun diff_stats_deletions as diffStatsDeletions { `DiffStats' } -> `Int'#}
+{#fun pure diff_stats_deletions as diffStatsDeletions { `DiffStats' } -> `Int'#}
 
 {#fun diff_foreach as diffForEach { `Diff', withDiffFileCb* `DiffFileCb', withDiffBinaryCbM* `Maybe DiffBinaryCb', withDiffHunkCbM* `Maybe DiffHunkCb', withDiffLineCbM* `Maybe DiffLineCb', withPayload* `Payload' } -> `Int'#}
 
-type DiffInfo = [(DiffDelta, ([(DiffHunk, [DiffLine])], [DiffBinary]))]
+type DiffInfo = [(DiffDelta, DeltaInfo)]
 
 type DeltaInfo = ([HunkInfo], [DiffBinary])
 
@@ -282,3 +294,37 @@ diffInfo diff = do
     modifyDeltaBinary delta binary = modifyDelta (modifyDeltaInfoWithBinary binary) delta
     appendDelta :: DiffDelta -> DiffInfo -> DiffInfo
     appendDelta = modifyDelta id
+
+diffFindOptionsVersion :: Int
+diffFindOptionsVersion = {#const GIT_DIFF_FIND_OPTIONS_VERSION#}
+
+{#fun diff_find_init_options as diffFindInitOptions { malloca- `DiffFindOptions' peekDiffFindOptions*, `Int' } -> `Int' checkReturnCode*-#}
+
+diffFindDefaultOptions :: IO (DiffFindOptions)
+diffFindDefaultOptions = diffFindInitOptions diffFindOptionsVersion
+
+_pokeDiffFindOptions :: (Ptr DiffFindOptions -> b -> IO ()) -> (a -> IO b) -> DiffFindOptions -> a -> IO ()
+_pokeDiffFindOptions setter inMarshaller (DiffFindOptions fp) val =
+  withForeignPtr fp (\p -> do
+    cVal <- inMarshaller val
+    setter p cVal)
+
+pokeDiffFindFlags :: DiffFindOptions -> DiffFindFlag -> IO ()
+pokeDiffFindFlags = _pokeDiffFindOptions ({#set diff_find_options->flags#}) (pure . fromDiffFindFlags)
+
+pokeDiffFindRenameThreshold :: DiffFindOptions -> Int -> IO ()
+pokeDiffFindRenameThreshold = _pokeDiffFindOptions ({#set diff_find_options->rename_threshold#}) (pure . fromIntegral)
+
+pokeDiffFindRenameFromRewriteThreshold :: DiffFindOptions -> Int -> IO ()
+pokeDiffFindRenameFromRewriteThreshold = _pokeDiffFindOptions ({#set diff_find_options->rename_from_rewrite_threshold#}) (pure . fromIntegral)
+
+pokeDiffFindCopyThreshold :: DiffFindOptions -> Int -> IO ()
+pokeDiffFindCopyThreshold = _pokeDiffFindOptions ({#set diff_find_options->copy_threshold#}) (pure . fromIntegral)
+
+pokeDiffFindBreakRewriteThreshold :: DiffFindOptions -> Int -> IO ()
+pokeDiffFindBreakRewriteThreshold = _pokeDiffFindOptions ({#set diff_find_options->break_rewrite_threshold#}) (pure . fromIntegral)
+
+pokeDiffFindRenameLimit :: DiffFindOptions -> Int -> IO ()
+pokeDiffFindRenameLimit = _pokeDiffFindOptions ({#set diff_find_options->rename_limit#}) (pure . fromIntegral)
+
+{#fun diff_find_similar as diffFindSimilar { `Diff', `DiffFindOptions' } -> `Int' checkReturnCode*-#}

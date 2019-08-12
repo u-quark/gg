@@ -4,6 +4,11 @@ Useful links
 * https://askubuntu.com/questions/528928/how-to-do-underline-bold-italic-strikethrough-color-background-and-size-i
 * https://gist.github.com/XVilka/8346728
 
+Debugging
+---------
+
+* https://gitlab.haskell.org/ghc/ghc/wikis/debugging/compiled-code
+
 Notes
 =====
 
@@ -18,3 +23,9 @@ To debug the GHC runtime (scheduler, gc, capabilities):
 To limit the size of the gc allocation area (make gc run more often):
 
 `+RTS -A51k -RTS`
+
+Alternatives
+============
+
+https://mystor.github.io/git-revise.html
+

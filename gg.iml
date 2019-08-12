@@ -81,5 +81,14 @@
     <orderEntry type="library" name="adjunctions-4.4" level="project" />
     <orderEntry type="library" name="invariant-0.5.2" level="project" />
     <orderEntry type="library" name="void-0.7.2" level="project" />
+    <orderEntry type="library" name="MissingH-1.4.1.0" level="project" />
+    <orderEntry type="library" name="HUnit-1.6.0.0" level="project" />
+    <orderEntry type="library" name="hslogger-1.2.12" level="project" />
+    <orderEntry type="library" name="network-2.8.0.1" level="project" />
+    <orderEntry type="library" name="old-locale-1.0.0.7" level="project" />
+    <orderEntry type="library" name="old-time-1.1.0.3" level="project" />
+    <orderEntry type="library" name="regex-compat-0.95.1" level="project" />
+    <orderEntry type="library" name="regex-base-0.93.2" level="project" />
+    <orderEntry type="library" name="regex-posix-0.95.2" level="project" />
   </component>
 </module>
