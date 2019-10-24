@@ -3,3 +3,4 @@ gg.cabal
 *~
 .idea/*.xml
 test_repo
+result*

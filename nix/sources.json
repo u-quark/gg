@@ -1,0 +1,38 @@
+{
+    "nh2-nixpkgs": {
+        "description": "Nix Packages collection",
+        "homepage": null,
+        "owner": "nh2",
+        "repo": "nixpkgs",
+        "rev": "d9cc01374235745ea8581174c4335ae9dda86504",
+        "sha256": "1sipa1scw8plkn5ks3mhj5ms4mmmzvpnw62pvi75gr54zs3hw2qi",
+        "type": "tarball",
+        "url": "https://github.com/nh2/nixpkgs/archive/d9cc01374235745ea8581174c4335ae9dda86504.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixpkgs": {
+        "branch": "nixos-19.03",
+        "description": "A read-only mirror of NixOS/nixpkgs tracking the released channels. Send issues and PRs to",
+        "homepage": "https://github.com/NixOS/nixpkgs",
+        "owner": "NixOS",
+        "repo": "nixpkgs-channels",
+        "rev": "d15a31f88a261281cd7c79038ae860c5ed95507d",
+        "sha256": "038iqfwmppnxq6aa89qm6k98lhwg686bmc9qjifibddm8pcp2wd0",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs-channels/archive/d15a31f88a261281cd7c79038ae860c5ed95507d.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "static-haskell": {
+        "branch": "master",
+        "description": "easily build most Haskell programs into fully static Linux executables",
+        "homepage": "",
+        "owner": "nh2",
+        "repo": "static-haskell-nix",
+        "rev": "b66fee31b10663588cc23dc806a75f393749d30d",
+        "sha256": "187xrm9g49q7b6c3ya182yfw6sjl62xi0my7gb5n5j26p39b6l5i",
+        "type": "tarball",
+        "url": "https://github.com/nh2/static-haskell-nix/archive/b66fee31b10663588cc23dc806a75f393749d30d.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "version": "d9cc01374235745ea8581174c4335ae9dda86504"
+    }
+}
