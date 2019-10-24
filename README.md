@@ -39,3 +39,9 @@ easy (enforcing) the usage of good (opinionated) practices.
    commits with merge request info from there.
  * Recursive git blame: ability to follow a line as it changed throughout the
    git history.
+ * Support for different [git workflows][1] ([Git flow command][2]).
+
+
+[1]: https://nvie.com/posts/a-successful-git-branching-model/
+[2]: https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow
+
