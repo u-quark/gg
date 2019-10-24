@@ -3,7 +3,27 @@
 A tool for interactively manipulating the history of git repos and for making
 easy (enforcing) the usage of good (opinionated) practices.
 
-## Features
+[![CircleCI](https://circleci.com/gh/u-quark/gg.svg?style=shield)](https://circleci.com/gh/u-quark/gg)
+
+## Install
+
+**Caution: this is very much work in progress.**
+
+gg is built as a single statically linked binary. So to install it you can
+just download the binary from the latest
+[nightly build](https://github.com/u-quark/gg/releases/download/nightly/gg)
+and `chmod +x` it.
+
+Alternatively, you can build it with nix. You can speed up the build by using
+nix binary caches, thanks to [Cachix](https://cachix.org/), by adding these
+to your `~/.config/nix/nix.conf`:
+
+```
+substituters = [...] https://static-haskell-nix.cachix.org https://gg.cachix.org
+trusted-public-keys = [...] static-haskell-nix.cachix.org0:Q17HawmAwaM1/BfIxaEDKAxwTOyRVhPG5Ji9K3+FvUU= gg.cachix.org-1:pCGtBoTzcTr3Nd5ou0061JBJpZPUWBBfChdAp7H8xh8=
+```
+
+## Features (my TODO list)
 
  * Apply changes immediately - no stage/index.
  * Easy undo/redo.
@@ -44,4 +64,7 @@ easy (enforcing) the usage of good (opinionated) practices.
 
 [1]: https://nvie.com/posts/a-successful-git-branching-model/
 [2]: https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow
+
+## Thanks to:
+ * [Oleh Stolyar](https://github.com/stolyaroleh)
 
