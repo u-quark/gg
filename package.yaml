@@ -35,6 +35,8 @@ library:
   source-dirs: src
   ghc-options:
   - -Wall
+  extra-libraries:
+  - git2
   exposed-modules:
     - Lib
     - GG.State
@@ -62,6 +64,8 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    extra-libraries:
+    - git2
     dependencies:
     - gg
 
@@ -74,5 +78,7 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    extra-libraries:
+    - git2
     dependencies:
     - gg

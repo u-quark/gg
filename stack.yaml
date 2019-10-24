@@ -73,5 +73,3 @@ extra-deps: [
 # compiler-check: newer-minor
 #
 
-ghc-options:
-    gg: -lgit2
