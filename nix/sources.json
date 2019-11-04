@@ -4,10 +4,10 @@
         "homepage": null,
         "owner": "nh2",
         "repo": "nixpkgs",
-        "rev": "d9cc01374235745ea8581174c4335ae9dda86504",
-        "sha256": "1sipa1scw8plkn5ks3mhj5ms4mmmzvpnw62pvi75gr54zs3hw2qi",
+        "rev": "11aa987ea5b5a593c9ca7a38b391804959f905e5",
+        "sha256": "1wns6051fxpgmszyxjvk7020zzhljjxqxkrnqmyd3b6fah7q4vny",
         "type": "tarball",
-        "url": "https://github.com/nh2/nixpkgs/archive/d9cc01374235745ea8581174c4335ae9dda86504.tar.gz",
+        "url": "https://github.com/nh2/nixpkgs/archive/11aa987ea5b5a593c9ca7a38b391804959f905e5.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
@@ -16,10 +16,10 @@
         "homepage": "https://github.com/NixOS/nixpkgs",
         "owner": "NixOS",
         "repo": "nixpkgs-channels",
-        "rev": "d15a31f88a261281cd7c79038ae860c5ed95507d",
-        "sha256": "038iqfwmppnxq6aa89qm6k98lhwg686bmc9qjifibddm8pcp2wd0",
+        "rev": "658eed76bbf836cdb72e554fee85233fed27f2a8",
+        "sha256": "0dq8ckm1z3824ib9wb7lrg53sjdnbqbj49m12jzrb3qq7717d3ic",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs-channels/archive/d15a31f88a261281cd7c79038ae860c5ed95507d.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs-channels/archive/658eed76bbf836cdb72e554fee85233fed27f2a8.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "static-haskell": {
@@ -28,10 +28,10 @@
         "homepage": "",
         "owner": "nh2",
         "repo": "static-haskell-nix",
-        "rev": "b66fee31b10663588cc23dc806a75f393749d30d",
-        "sha256": "187xrm9g49q7b6c3ya182yfw6sjl62xi0my7gb5n5j26p39b6l5i",
+        "rev": "e3823be4caba6917c7c9f9dde9bece8ed8a4179b",
+        "sha256": "08ykb0x10xxsdhqw6vjgxw45g31vzjf2lkx2hk02xg2yqm734hyc",
         "type": "tarball",
-        "url": "https://github.com/nh2/static-haskell-nix/archive/b66fee31b10663588cc23dc806a75f393749d30d.tar.gz",
+        "url": "https://github.com/nh2/static-haskell-nix/archive/e3823be4caba6917c7c9f9dde9bece8ed8a4179b.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "d9cc01374235745ea8581174c4335ae9dda86504"
     }

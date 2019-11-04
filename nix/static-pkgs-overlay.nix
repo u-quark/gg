@@ -17,10 +17,9 @@ self: super:
   nghttp2 = (super.nghttp2.override {
     enableApp = false;
   }).lib;
-  zlib = super.zlib.static;
-  curl = super.curl.override {
+  curl = (super.curl.override {
     gssSupport = false;
-  };
+  }).overrideAttrs (old: { dontDisableStatic = true; });
   libssh2 = super.libssh2.overrideAttrs (old: {
     dontDisableStatic = true;
   });

@@ -6,7 +6,7 @@ let
   pkgs = nh2-pkgs // { pkgsStatic = pkgsStatic; };
   static-haskell = import (sources.static-haskell + "/survey") {
     normalPkgs = pkgs;
-    compiler = "ghc864";
+    compiler = "ghc865";
   };
   static-haskell-pkgs = static-haskell.haskellPackagesWithLibsReadyForStaticLinking;
   gg = static-haskell-pkgs.callPackage (import ./gg.nix) {
