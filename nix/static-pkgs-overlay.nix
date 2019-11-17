@@ -14,15 +14,11 @@ self: super:
       nativeBuildInputs = [ pkgs.binutils ];
     }
   );
-  nghttp2 = (super.nghttp2.override {
-    enableApp = false;
-  }).lib;
-  curl = (super.curl.override {
-    gssSupport = false;
-  }).overrideAttrs (old: { dontDisableStatic = true; });
-  libssh2 = super.libssh2.overrideAttrs (old: {
-    dontDisableStatic = true;
-  });
+  # We cannot override regular ncurses because all the tools
+  # ghc etc depend on this and then nothing works!
+  static-ncurses = super.ncurses.override {
+    enableStatic = true;
+  };
   libgit2 = super.libgit2.overrideAttrs (old: {
     cmakeFlags = old.cmakeFlags ++ [ "-DBUILD_SHARED_LIBS=OFF" ];
     nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.binutils ];
@@ -31,6 +27,8 @@ self: super:
       ar -M <<EOM
         CREATE libgit2.a
         ADDLIB libgit2_original.a
+        ADDLIB ${self.zlib_both}/lib/libz.a
+        ADDLIB ${self.nghttp2.lib}/lib/libnghttp2.a
         ADDLIB ${self.curl.out}/lib/libcurl.a
         ADDLIB ${self.libssh2.out}/lib/libssh2.a
         ADDLIB ${self.openssl.out}/lib/libssl.a

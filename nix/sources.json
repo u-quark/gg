@@ -1,4 +1,28 @@
 {
+    "MissingH": {
+        "branch": "master",
+        "description": "Utility library [Haskell]",
+        "homepage": "https://hackage.haskell.org/package/MissingH",
+        "owner": "haskell-hvr",
+        "repo": "missingh",
+        "sha256": "14z37law4y12iqi2dc30jhv9v64rv36vdrndsayprnx9an0pbq28",
+        "type": "tarball",
+        "url": "https://github.com/haskell-hvr/missingh/archive/v1.4.2.0.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<version>.tar.gz",
+        "version": "v1.4.2.0"
+    },
+    "brick": {
+        "branch": "master",
+        "description": "A declarative Unix terminal UI programming library written in Haskell",
+        "homepage": "",
+        "owner": "jtdaugherty",
+        "repo": "brick",
+        "rev": "3d34ef115631700ab6d46088357f7e2ab13c424e",
+        "sha256": "17a4ylhkxaz025v9v8prv18az876i14ik887fj50fn27gs9vbxgl",
+        "type": "tarball",
+        "url": "https://github.com/jtdaugherty/brick/archive/3d34ef115631700ab6d46088357f7e2ab13c424e.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "nh2-nixpkgs": {
         "description": "Nix Packages collection",
         "homepage": null,
@@ -34,5 +58,17 @@
         "url": "https://github.com/nh2/static-haskell-nix/archive/e3823be4caba6917c7c9f9dde9bece8ed8a4179b.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "d9cc01374235745ea8581174c4335ae9dda86504"
+    },
+    "vty": {
+        "branch": "master",
+        "description": "A high-level ncurses alternative written in Haskell",
+        "homepage": "",
+        "owner": "jtdaugherty",
+        "repo": "vty",
+        "rev": "0f08358bd39f5e35bf8a6d04ae8e5a2ab3781336",
+        "sha256": "0x97mhdvmcx9jkpapj7jbbn2cmwvhsrr71yrc9ilhbp73ly1nry8",
+        "type": "tarball",
+        "url": "https://github.com/jtdaugherty/vty/archive/0f08358bd39f5e35bf8a6d04ae8e5a2ab3781336.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

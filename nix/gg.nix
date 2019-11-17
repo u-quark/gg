@@ -1,21 +1,25 @@
 {
-  base,
-  brick,
-  bytestring,
-  c2hs,
-  generic-lens,
-  libgit2,
-  hpack,
-  lens,
-  MissingH,
   mkDerivation,
-  ncurses,
-  nix-gitignore,
-  process,
   stdenv,
+  nix-gitignore,
+  # Build deps
+  hpack,
+  c2hs,
+  # Haskell deps
+  base,
   time,
+  brick,
+  vty,
+  lens,
+  generic-lens,
   vector,
-  vty
+  process,
+  bytestring,
+  MissingH,
+  # C deps
+  libgit2,
+  # Transitive Haskell C deps
+  ncurses
 }:
 
 mkDerivation {
@@ -32,17 +36,20 @@ mkDerivation {
     "--ghc-option=-optl=-pthread"
   ];
   executableHaskellDepends = [
+    # Haskell deps
     base
-    brick
-    bytestring
-    generic-lens
-    lens
-    MissingH
-    process
     time
-    vector
+    brick
     vty
+    lens
+    generic-lens
+    vector
+    process
+    bytestring
+    MissingH
+    # C deps
     libgit2
+    # Transitive Haskell C deps
     ncurses
   ];
   buildDepends = [ hpack c2hs ];
