@@ -60,15 +60,15 @@
         "version": "d9cc01374235745ea8581174c4335ae9dda86504"
     },
     "vty": {
-        "branch": "master",
+        "branch": "gg",
         "description": "A high-level ncurses alternative written in Haskell",
         "homepage": "",
-        "owner": "jtdaugherty",
+        "owner": "u-quark",
         "repo": "vty",
-        "rev": "0f08358bd39f5e35bf8a6d04ae8e5a2ab3781336",
-        "sha256": "0x97mhdvmcx9jkpapj7jbbn2cmwvhsrr71yrc9ilhbp73ly1nry8",
+        "rev": "688403a40bf04d44ce37680f5a0f22d189faab52",
+        "sha256": "18rprlybrzbc05k9lzacmxiwinh7brx97hk92a2w6m676d8ypaq6",
         "type": "tarball",
-        "url": "https://github.com/jtdaugherty/vty/archive/0f08358bd39f5e35bf8a6d04ae8e5a2ab3781336.tar.gz",
+        "url": "https://github.com/u-quark/vty/archive/688403a40bf04d44ce37680f5a0f22d189faab52.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
