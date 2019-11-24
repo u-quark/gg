@@ -1,7 +1,6 @@
 {
   mkDerivation,
   stdenv,
-  nix-gitignore,
   # Build deps
   hpack,
   c2hs,
@@ -25,7 +24,9 @@
 mkDerivation {
   pname = "gg";
   version = "0.1.0.0";
-  src = nix-gitignore.gitignoreSource [ ".git/*" "nix/*" "*.nix" ] ./..;
+  src = stdenv.lib.sourceByRegex ./.. [
+    "app" "app/.*" "src" "src/.*" "test" "test/.*" "stack.yaml" "package.yaml" "Setup.hs"
+  ];
   isLibrary = false;
   isExecutable = true;
   enableSharedLibraries = false;
