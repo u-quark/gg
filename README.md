@@ -4,6 +4,7 @@ A tool for interactively manipulating the history of git repos and for making
 easy (enforcing) the usage of good (opinionated) practices.
 
 [![CircleCI](https://circleci.com/gh/u-quark/gg.svg?style=shield)](https://circleci.com/gh/u-quark/gg)
+[![License: GPLv3+](https://img.shields.io/static/v1?label=license&message=GPLv3+&color=bd0000&style=plastic)](https://www.gnu.org/licenses/gpl.html)
 
 ## Install
 
@@ -64,6 +65,25 @@ trusted-public-keys = [...] static-haskell-nix.cachix.org0:Q17HawmAwaM1/BfIxaEDK
 
 [1]: https://nvie.com/posts/a-successful-git-branching-model/
 [2]: https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow
+
+## License
+
+Copyright (C) 2019  Lefteris Kritikos (eleftherios.kritikos@gmail.com)
+
+![GPLv3 Logo](https://www.gnu.org/graphics/gplv3-with-text-136x68.png)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ## Thanks to:
  * [Oleh Stolyar](https://github.com/stolyaroleh)
