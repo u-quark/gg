@@ -42,12 +42,12 @@ import           Brick                        (App (..), AttrMap, AttrName,
 import qualified Brick.Widgets.List           as L
 import           Control.Lens                 (element, mapMOf, to, (^.), (^?),
                                                (^?!))
-import           Control.Monad                (void)
+import           Control.Monad                (void, when)
 import           Control.Monad.IO.Class       (liftIO)
 import           Data.Bits                    (Bits, zeroBits, (.&.))
 import           Data.Generics.Product.Fields (field)
 import           Data.List                    (intercalate)
-import           Data.Maybe                   (fromMaybe, isJust)
+import           Data.Maybe                   (fromMaybe, isJust, isNothing)
 import           Data.String.Utils            (replace)
 import           Data.Time                    (ZonedTime, defaultTimeLocale,
                                                formatTime, zonedTimeToLocalTime,
@@ -85,6 +85,7 @@ import           Libgit2                      (DeltaInfo, DeltaType (..),
                                                diffStatsDeletions,
                                                diffStatsFilesChanged,
                                                diffStatsInsertions)
+import           System.Environment           (lookupEnv, setEnv)
 
 data Event
 
@@ -725,6 +726,8 @@ theMap =
 
 main :: State -> IO ()
 main state = do
+  terminfoDirs <- lookupEnv "TERMINFO_DIRS"
+  when (isNothing terminfoDirs) (setEnv "TERMINFO_DIRS" "/etc/terminfo:/lib/terminfo:/usr/share/terminfo")
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
   void $ customMain initialVty buildVty Nothing app state
