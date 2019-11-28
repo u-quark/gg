@@ -65,10 +65,10 @@
         "homepage": "",
         "owner": "u-quark",
         "repo": "vty",
-        "rev": "688403a40bf04d44ce37680f5a0f22d189faab52",
-        "sha256": "18rprlybrzbc05k9lzacmxiwinh7brx97hk92a2w6m676d8ypaq6",
+        "rev": "a5f8af8e0a16756bbd33ff79b80cd39d0382175f",
+        "sha256": "139xc84d68ada5dc94ph1d4bzvan4p2xha1flqmwkf5az998xl54",
         "type": "tarball",
-        "url": "https://github.com/u-quark/vty/archive/688403a40bf04d44ce37680f5a0f22d189faab52.tar.gz",
+        "url": "https://github.com/u-quark/vty/archive/a5f8af8e0a16756bbd33ff79b80cd39d0382175f.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

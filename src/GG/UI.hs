@@ -623,7 +623,7 @@ closeAction s =
     else halt s
 
 rgbColor :: Integer -> Integer -> Integer -> V.Color
-rgbColor = V.rgbColor
+rgbColor = V.linearColor
 
 -- Solarized (sort of because of color approximation) so my eyes don't bleed
 base03 :: V.Color
