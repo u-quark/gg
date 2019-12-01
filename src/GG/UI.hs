@@ -170,6 +170,9 @@ doRebaseAction a s = do
         Nothing -> pure s
   continue s'
 
+defaultAttr :: AttrName
+defaultAttr = "default"
+
 oidAttr :: AttrName
 oidAttr = L.listAttr <> "oid"
 
@@ -204,19 +207,19 @@ fileDelta :: AttrName
 fileDelta = "file_delta"
 
 fileAdded :: AttrName
-fileAdded = "added"
+fileAdded = fileDelta <> "added"
 
 fileDeleted :: AttrName
-fileDeleted = "deleted"
+fileDeleted = fileDelta <> "deleted"
 
 fileModified :: AttrName
-fileModified = "modified"
+fileModified = fileDelta <> "modified"
 
 fileRenamed :: AttrName
-fileRenamed = "renamed"
+fileRenamed = fileDelta <> "renamed"
 
 fileCopied :: AttrName
-fileCopied = "copied"
+fileCopied = fileDelta <> "copied"
 
 diffAttr :: AttrName
 diffAttr = "diff"
@@ -251,6 +254,9 @@ myFormatTime = formatTime defaultTimeLocale "%Y-%m-%d %H:%M"
 formatOid :: OID -> String
 formatOid = take 8 . show
 
+fillLine :: AttrName -> Widget Name -> Widget Name
+fillLine attr line = withAttr attr $ padRight Max line
+
 drawCommit :: Bool -> Commit -> Widget Name
 drawCommit _selected c =
   foldr1
@@ -274,7 +280,7 @@ drawUI s = [ui]
       foldr1
         (<=>)
         [ padBottom Max (L.renderList drawCommit True (s ^. field @"commitList"))
-        , maybe emptyWidget (padBottom Max . drawOpenCommit) (s ^. field @"openCommit")
+        , maybe emptyWidget (withAttr defaultAttr . padBottom Max . drawOpenCommit) (s ^. field @"openCommit")
         , withAttr
             statusBarAttr
             (withAttr statusBranchAttr (str ("On " <> s ^. field @"branchName")) <+> padRight Max (str " "))
@@ -312,28 +318,38 @@ drawSignatures c = foldr1 (<=>) cases
     sigCommitterName = sigName committerName committerEmail
     sigCommitterDate = sigDate committerWhen
     cases
-      | nameEmailSame && datesSame = [str "Author:    " <+> sigAuthorName, str "Date:      " <+> sigAuthorDate]
+      | nameEmailSame && datesSame =
+        map (fillLine defaultAttr) [str "Author:    " <+> sigAuthorName, str "Date:      " <+> sigAuthorDate]
       | not nameEmailSame && datesSame =
-        [ str "Author:    " <+> sigAuthorName
-        , str "Committer: " <+> sigCommitterName
-        , str "Date:      " <+> sigCommitterDate
-        ]
+        map
+          (fillLine defaultAttr)
+          [ str "Author:    " <+> sigAuthorName
+          , str "Committer: " <+> sigCommitterName
+          , str "Date:      " <+> sigCommitterDate
+          ]
       | nameEmailSame && not datesSame =
-        [ str "Author:      " <+> sigAuthorName
-        , str "Date:        " <+> sigAuthorDate
-        , str "Commit Date: " <+> sigCommitterDate
-        ]
+        map
+          (fillLine defaultAttr)
+          [ str "Author:      " <+> sigAuthorName
+          , str "Date:        " <+> sigAuthorDate
+          , str "Commit Date: " <+> sigCommitterDate
+          ]
       | not nameEmailSame && not datesSame =
-        [ str "Author:    " <+> sigAuthorName
-        , str "Date:      " <+> sigAuthorDate
-        , str "Committer: " <+> sigCommitterName
-        , str "Date:      " <+> sigCommitterDate
-        ]
+        map
+          (fillLine defaultAttr)
+          [ str "Author:    " <+> sigAuthorName
+          , str "Date:      " <+> sigAuthorDate
+          , str "Committer: " <+> sigCommitterName
+          , str "Date:      " <+> sigCommitterDate
+          ]
       | otherwise = error "Unreachable code!"
 
 drawDiff :: DiffInfo -> Widget Name
 drawDiff diffInfo =
-  foldr1 (<=>) $ map (\(diffDelta, deltaInfo) -> str " " <=> drawDelta diffDelta <=> drawDeltaInfo deltaInfo) diffInfo
+  foldr1 (<=>) $
+  map
+    (\(diffDelta, deltaInfo) -> fillLine defaultAttr (str " ") <=> drawDelta diffDelta <=> drawDeltaInfo deltaInfo)
+    diffInfo
 
 data FileType
   = Normal
@@ -355,7 +371,7 @@ drawDelta DiffDelta { diffDeltaSimilarity = Similarity similarity
                     , diffDeltaNewFile = new
                     , diffDeltaStatus = deltaType
                     } =
-  withAttr fileDelta $ withAttr attr (str text <+> drawTypeTransition <+> drawModeTransition <+> drawSimilarity)
+  fillLine fileDelta $ withAttr attr (str text <+> drawTypeTransition <+> drawModeTransition <+> drawSimilarity)
   where
     fileExists file = diffFileFlags file `isFlagSet` diffExists
     oldExists = fileExists old
@@ -484,7 +500,7 @@ drawHunkInfo (oldLineWidth, newLineWidth) (hunk, diffLines) =
   hunkHeaderUI <=> foldr1 (<=>) (map (drawLine (oldLineWidth, newLineWidth)) diffLines)
   where
     hunkHeaderUI =
-      withAttr diffLineNumber (str $ center (oldLineWidth + newLineWidth + 1) "...") <+>
+      fillLine defaultAttr $ withAttr diffLineNumber (str $ center (oldLineWidth + newLineWidth + 1) "...") <+>
       withAttr diffLineNumberSep (str doubleDividingLine) <+>
       drawHunk hunk
 
@@ -538,9 +554,9 @@ drawOpenCommit openCommit =
     (cached CommitDiffUI $
      foldr1
        (<=>)
-       [ str " "
-       , str (openCommit ^. (field @"openCommit" . field @"body"))
-       , str " "
+       [ fillLine defaultAttr $ str " "
+       , fillLine defaultAttr $ str (openCommit ^. (field @"openCommit" . field @"body"))
+       , fillLine defaultAttr $ str " "
        , drawSignatures (openCommit ^. field @"openCommit")
        , drawDiff (openCommit ^. field @"diffInfo")
        ])
@@ -695,7 +711,8 @@ theMap :: AttrMap
 theMap =
   attrMap
     V.defAttr
-    [ (L.listAttr, base03 `on` base3)
+    [ (defaultAttr, base03 `on` base3)
+    , (L.listAttr, base03 `on` base3)
     , (L.listSelectedAttr, base03 `on` base3 `V.withStyle` V.bold)
     , (oidAttr, fg base01)
     , (authorAttr, fg violet)
