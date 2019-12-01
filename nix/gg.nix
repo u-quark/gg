@@ -25,7 +25,7 @@ mkDerivation {
   pname = "gg";
   version = "0.1.0.0";
   src = stdenv.lib.sourceByRegex ./.. [
-    "app" "app/.*" "src" "src/.*" "test" "test/.*" "stack.yaml" "package.yaml" "Setup.hs"
+    "app" "app/.*" "src" "src/.*" "test" "test/.*" "stack.yaml" "package.yaml" "Setup.hs" "LICENSE"
   ];
   isLibrary = false;
   isExecutable = true;
@@ -55,6 +55,6 @@ mkDerivation {
   ];
   buildDepends = [ hpack c2hs ];
   homepage = "https://github.com/u-quark/gg#readme";
-  license = stdenv.lib.licenses.bsd3;
+  license = stdenv.lib.licenses.gpl3Plus;
 }
 

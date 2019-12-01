@@ -1,7 +1,8 @@
 name:                gg
 version:             0.1.0.0
 github:              "u-quark/gg"
-license:             BSD3
+license:             GPL-3.0-or-later
+license-file:        LICENSE
 author:              "Lefteris Kritikos"
 maintainer:          "eleftherios.kritikos@gmail.com"
 copyright:           "Lefteris Kritikos"
