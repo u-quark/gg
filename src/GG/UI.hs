@@ -25,67 +25,71 @@ module GG.UI
   , Commit
   ) where
 
-import           Brick                        (App (..), AttrMap, AttrName,
-                                               BrickEvent (..),
-                                               Direction (Down, Up), EventM,
-                                               Next, Padding (..),
-                                               ViewportType (Vertical), Widget,
-                                               attrMap, bg, cached, continue,
-                                               customMain, emptyWidget, fg,
-                                               halt, invalidateCacheEntry,
-                                               neverShowCursor, on, padBottom,
-                                               padRight, str, textWidth,
-                                               vScrollBy, vScrollPage,
-                                               vScrollToBeginning, vScrollToEnd,
-                                               viewport, viewportScroll,
-                                               withAttr, (<+>), (<=>))
-import qualified Brick.Widgets.List           as L
-import           Control.Lens                 (element, mapMOf, to, (^.), (^?),
-                                               (^?!))
-import           Control.Monad                (void, when)
-import           Control.Monad.IO.Class       (liftIO)
-import           Data.Bits                    (Bits, zeroBits, (.&.))
-import           Data.Generics.Product.Fields (field)
-import           Data.List                    (intercalate)
-import           Data.Maybe                   (fromMaybe, isJust, isNothing)
-import           Data.String.Utils            (replace)
-import           Data.Time                    (ZonedTime, defaultTimeLocale,
-                                               formatTime, zonedTimeToLocalTime,
-                                               zonedTimeZone)
-import           Data.Vector                  (toList)
-import           GG.Repo                      (Action, doRebase, fixupCommit,
-                                               moveCommitDown, moveCommitUp,
-                                               readCommit, readCommitDiff,
-                                               readNCommits, readRepoState)
-import           GG.State                     (Commit, Name (..), OpenCommit,
-                                               State (..), addMoreCommits,
-                                               closeCommitDetails, commitL,
-                                               openCommitDetails,
-                                               updateCommitsPos,
-                                               updateRepoState)
-import           Graphics.Vty                 (defAttr)
-import qualified Graphics.Vty                 as V
-import           Libgit2                      (DeltaInfo, DeltaType (..),
-                                               DiffDelta (DiffDelta),
-                                               DiffFile (DiffFile), DiffHunk,
-                                               DiffInfo, DiffLine,
-                                               Filemode (FilemodeBlob, FilemodeBlobExecutable, FilemodeLink),
-                                               HunkInfo, OID,
-                                               Similarity (Similarity),
-                                               diffDeltaNewFile,
-                                               diffDeltaOldFile,
-                                               diffDeltaSimilarity,
-                                               diffDeltaStatus, diffExists,
-                                               diffFileFlags, diffFileMode,
-                                               diffFilePath, diffHunkHeader,
-                                               diffLineContent,
-                                               diffLineNewLineno,
-                                               diffLineOldLineno,
-                                               diffLineOrigin, diffNotBinary,
-                                               diffStatsDeletions,
-                                               diffStatsFilesChanged,
-                                               diffStatsInsertions)
-import           System.Environment           (lookupEnv, setEnv)
+import           Brick                         (App (..), AttrMap, AttrName,
+                                                BrickEvent (..),
+                                                Direction (Down, Up), EventM,
+                                                Next, Padding (..),
+                                                ViewportType (Vertical), Widget,
+                                                attrMap, bg, cached, continue,
+                                                customMain, emptyWidget, fg,
+                                                getVtyHandle, halt,
+                                                invalidateCacheEntry,
+                                                neverShowCursor, on, padBottom,
+                                                padRight, str, textWidth,
+                                                vScrollBy, vScrollPage,
+                                                vScrollToBeginning,
+                                                vScrollToEnd, viewport,
+                                                viewportScroll, withAttr, (<+>),
+                                                (<=>))
+import qualified Brick.Widgets.List            as L
+import           Control.Lens                  (element, mapMOf, to, (^.), (^?),
+                                                (^?!))
+import           Control.Monad                 (void, when)
+import           Control.Monad.IO.Class        (liftIO)
+import           Data.Bits                     (Bits, zeroBits, (.&.))
+import           Data.Generics.Product.Fields  (field)
+import           Data.List                     (intercalate)
+import           Data.Maybe                    (fromMaybe, isJust, isNothing)
+import           Data.String.Utils             (replace)
+import           Data.Time                     (ZonedTime, defaultTimeLocale,
+                                                formatTime,
+                                                zonedTimeToLocalTime,
+                                                zonedTimeZone)
+import           Data.Vector                   (toList)
+import           GG.Repo                       (Action, doRebase, fixupCommit,
+                                                moveCommitDown, moveCommitUp,
+                                                readCommit, readCommitDiff,
+                                                readNCommits, readRepoState)
+import           GG.State                      (Commit, Name (..), OpenCommit,
+                                                State (..), addMoreCommits,
+                                                closeCommitDetails, commitL,
+                                                openCommitDetails,
+                                                updateCommitsPos,
+                                                updateRepoState)
+import           Graphics.Vty                  (defAttr)
+import qualified Graphics.Vty                  as V
+import           Graphics.Vty.Output.Interface (Output (resetBackgroundColor, setBackgroundColor))
+import           Libgit2                       (DeltaInfo, DeltaType (..),
+                                                DiffDelta (DiffDelta),
+                                                DiffFile (DiffFile), DiffHunk,
+                                                DiffInfo, DiffLine,
+                                                Filemode (FilemodeBlob, FilemodeBlobExecutable, FilemodeLink),
+                                                HunkInfo, OID,
+                                                Similarity (Similarity),
+                                                diffDeltaNewFile,
+                                                diffDeltaOldFile,
+                                                diffDeltaSimilarity,
+                                                diffDeltaStatus, diffExists,
+                                                diffFileFlags, diffFileMode,
+                                                diffFilePath, diffHunkHeader,
+                                                diffLineContent,
+                                                diffLineNewLineno,
+                                                diffLineOldLineno,
+                                                diffLineOrigin, diffNotBinary,
+                                                diffStatsDeletions,
+                                                diffStatsFilesChanged,
+                                                diffStatsInsertions)
+import           System.Environment            (lookupEnv, setEnv)
 
 data Event
 
@@ -95,9 +99,15 @@ app =
     { appDraw = drawUI
     , appChooseCursor = neverShowCursor
     , appHandleEvent = handleEvent
-    , appStartEvent = return
+    , appStartEvent = startEvent
     , appAttrMap = const theMap
     }
+
+startEvent :: State -> EventM Name State
+startEvent s = do
+  vty <- getVtyHandle
+  liftIO $ setBackgroundColor (V.outputIface vty) base3
+  return s
 
 handleEvent :: State -> BrickEvent Name Event -> EventM Name (Next State)
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'q') [])) = closeAction s
@@ -748,3 +758,4 @@ main state = do
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
   void $ customMain initialVty buildVty Nothing app state
+  resetBackgroundColor (V.outputIface initialVty)
