@@ -54,12 +54,7 @@ instance Storable Error where
     <*> liftM (toEnum . fromIntegral) ({#get error->klass #} p)
   poke _ = error "Can't poke Error"
 
--- |
--- Corresponds to giterr_last() in the C library. The name matches
--- future compatibility as this call is deprecated and replaced with
--- git_error_last() in later release of libgit2.
---
-{#fun giterr_last as errorLast {} -> `Error' peek*#}
+{#fun git_error_last as errorLast {} -> `Error' peek*#}
 
 data Libgit2Exception = Libgit2Exception Error ErrorCode deriving (Eq)
 instance Exception Libgit2Exception

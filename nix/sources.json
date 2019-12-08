@@ -23,6 +23,19 @@
         "url": "https://github.com/jtdaugherty/brick/archive/3d34ef115631700ab6d46088357f7e2ab13c424e.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "libgit2": {
+        "branch": "master",
+        "description": "A cross-platform, linkable library implementation of Git that you can use in your application.",
+        "homepage": "https://libgit2.org/",
+        "owner": "libgit2",
+        "repo": "libgit2",
+        "rev": "v0.28.3",
+        "sha256": "07068flm9xi25wmcs65nyfg6a7ikgfv96i2nhgyj5gzs9gljqiz2",
+        "type": "tarball",
+        "url": "https://github.com/libgit2/libgit2/archive/v0.28.3.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "version": "0.28.3"
+    },
     "nh2-nixpkgs": {
         "description": "Nix Packages collection",
         "homepage": null,

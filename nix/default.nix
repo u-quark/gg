@@ -2,7 +2,10 @@ let
   ghc = "ghc881";
   sources = import ./sources.nix;
   pkgs = import sources.nh2-nixpkgs {};
-  static-pkgs-overlay = import ./static-pkgs-overlay.nix { inherit pkgs; };
+  static-pkgs-overlay = import ./static-pkgs-overlay.nix {
+    inherit sources;
+    inherit pkgs;
+  };
   haskell-pkgs-overlay = import ./haskell-pkgs-overlay.nix {
     inherit sources;
     haskellLib = pkgs.haskell.lib;
