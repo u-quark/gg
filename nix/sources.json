@@ -5,11 +5,12 @@
         "homepage": "https://hackage.haskell.org/package/MissingH",
         "owner": "haskell-hvr",
         "repo": "missingh",
+        "rev": "v1.4.2.0",
         "sha256": "14z37law4y12iqi2dc30jhv9v64rv36vdrndsayprnx9an0pbq28",
         "type": "tarball",
         "url": "https://github.com/haskell-hvr/missingh/archive/v1.4.2.0.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<version>.tar.gz",
-        "version": "v1.4.2.0"
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "version": "1.4.2.0"
     },
     "brick": {
         "branch": "master",
