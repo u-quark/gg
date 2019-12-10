@@ -72,7 +72,7 @@ trusted-public-keys = [...] static-haskell-nix.cachix.org0:Q17HawmAwaM1/BfIxaEDK
 
 Copyright (C) 2019  Lefteris Kritikos (eleftherios.kritikos@gmail.com)
 
-![GPLv3 Logo](https://www.gnu.org/graphics/gplv3-with-text-136x68.png)
+[![GPLv3 Logo](https://www.gnu.org/graphics/gplv3-with-text-136x68.png)](https://www.gnu.org/licenses/gpl.html)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
