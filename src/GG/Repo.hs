@@ -33,16 +33,17 @@ import           Data.List      (intercalate)
 import           Data.Maybe     (fromJust)
 import qualified GG.State       as S
 import           Libgit2        (Commit, DiffInfo, DiffStats, OID, Reference,
-                                 Repository, Signature (..), commitAuthor,
-                                 commitBody, commitCommitter, commitId,
-                                 commitLookup, commitParent, commitParentcount,
-                                 commitSummary, commitTree, diffDefaultOptions,
-                                 diffFindAll, diffFindDefaultOptions,
-                                 diffFindSimilar, diffGetStats, diffInfo,
-                                 diffTreeToTree, libgit2Init, pokeDiffFindFlags,
+                                 Repository, commitAuthor, commitBody,
+                                 commitCommitter, commitId, commitLookup,
+                                 commitParent, commitParentcount, commitSummary,
+                                 commitTree, diffDefaultOptions, diffFindAll,
+                                 diffFindDefaultOptions, diffFindSimilar,
+                                 diffGetStats, diffInfo, diffTreeToTree,
+                                 libgit2Init, pokeDiffFindFlags,
                                  referenceResolve, referenceShorthand,
                                  referenceTarget, repositoryHead,
-                                 repositoryOpenExt, repositoryOpenNoFlags)
+                                 repositoryOpenExt, repositoryOpenNoFlags,
+                                 signatureEmail, signatureName, signatureWhen)
 import           System.Exit    (ExitCode (..))
 import           System.Process (readCreateProcessWithExitCode, shell)
 
@@ -52,19 +53,14 @@ readCommit commit = do
   summary <- commitSummary commit
   body <- commitBody commit
   author <- commitAuthor commit
+  authorName <- signatureName author
+  authorEmail <- signatureEmail author
+  authorWhen <- signatureWhen author
   committer <- commitCommitter commit
-  pure $
-    S.Commit
-      oid
-      summary
-      body
-      (signatureName author)
-      (signatureEmail author)
-      (signatureWhen author)
-      (signatureName committer)
-      (signatureEmail committer)
-      (signatureWhen committer)
-      False
+  committerName <- signatureName committer
+  committerEmail <- signatureEmail committer
+  committerWhen <- signatureWhen committer
+  pure $ S.Commit oid summary body authorName authorEmail authorWhen committerName committerEmail committerWhen False
 
 readCommitDiff :: Repository -> OID -> IO (DiffStats, DiffInfo)
 readCommitDiff repo oid = do

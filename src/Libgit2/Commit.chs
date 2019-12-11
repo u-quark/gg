@@ -35,7 +35,7 @@ where
 {#import Libgit2.Types#}
 {#import Libgit2.OID#}
 
-import Foreign (alloca, peek)
+import Foreign (alloca)
 import Foreign.C (CString)
 import Data.Time.LocalTime (ZonedTime)
 import Libgit2.Errors (checkReturnCode)
@@ -76,9 +76,9 @@ commitTime commit = do
   offset <- commitTimeOffset commit
   pure $ gitToLocalTime (fromIntegral systemTime) offset
 
-{#fun commit_committer as commitCommitter { `Commit' } -> `Signature' peek*#}
+{#fun commit_committer as commitCommitter { `Commit' } -> `Signature' peekSignatureNF*#}
 
-{#fun commit_author as commitAuthor { `Commit' } -> `Signature' peek*#}
+{#fun commit_author as commitAuthor { `Commit' } -> `Signature' peekSignatureNF*#}
 
 {#fun commit_parentcount as commitParentcount { `Commit' } -> `Int'#}
 

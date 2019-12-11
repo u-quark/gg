@@ -15,29 +15,22 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
-module Libgit2.Refs
-  (
-    referenceShorthand
-  , referenceTarget
-  , referenceResolve
-  ) where
+module Libgit2.Config (
+    configOpenDefault
+  , configOpenLevel
+)
+
+where
 
 {#import Libgit2.Types#}
-{#import Libgit2.OID#}
 
-import Foreign (alloca, Ptr, newForeignPtr_)
+import Foreign (alloca)
 import Libgit2.Errors (checkReturnCode)
-import Libgit2.Utils (maybeNullPeek)
 
-#include "git2/refs.h"
+#include "git2/config.h"
 
 {#context lib="git2" prefix="git_"#}
 
-{#fun reference_shorthand as referenceShorthand { `Reference' } -> `String'#}
+{#fun config_open_default as configOpenDefault { alloca- `Config' peekNewConfig* } -> `Int' checkReturnCode*-#}
 
-maybeNullOID :: Ptr OID -> IO (Maybe OID)
-maybeNullOID = maybeNullPeek (fmap OID . newForeignPtr_)
-
-{#fun reference_target as referenceTarget { `Reference' } -> `Maybe OID' maybeNullOID*#}
-
-{#fun reference_resolve as referenceResolve {  alloca- `Reference' peekNewReference*, `Reference' } -> `Int' checkReturnCode*-#}
+{#fun config_open_level as configOpenLevel { alloca- `Config' peekNewConfig*, `Config', `ConfigLevel' } -> `Int' checkReturnCode*-#}

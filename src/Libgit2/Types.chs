@@ -37,7 +37,10 @@ module Libgit2.Types
   , withReference
   , gitToLocalTime
   , Signature(..)
-  , SignaturePtr
+  , peekNewSignature
+  , peekSignatureNF
+  , withSignature
+  , signatureFree
   , Tree(..)
   , peekNewTree
   , treeFree
@@ -129,11 +132,16 @@ module Libgit2.Types
   , DiffFindOptions(..)
   , withDiffFindOptions
   , peekDiffFindOptions
+  , ConfigLevel
+  , Config(..)
+  , peekNewConfig
+  , configFree
+  , withConfig
 )
 
 where
 
-import Foreign (Ptr, Storable, peek, newForeignPtr_, peekByteOff)
+import Foreign (Ptr, Storable, peek, newForeignPtr, newForeignPtr_, peekByteOff, finalizerFree)
 import Foreign.C (peekCString, peekCStringLen, CUInt, CLong, castCCharToChar)
 import Data.Bits (Bits)
 import Data.Time.LocalTime (ZonedTime, minutesToTimeZone, utcToZonedTime)
@@ -149,6 +157,8 @@ import Libgit2.Utils (peekNew)
 #include <git2/refs.h>
 #include <git2/tree.h>
 #include <git2/diff.h>
+#include <git2/config.h>
+#include <git2/signature.h>
 
 {#context lib="git2" prefix="git_"#}
 
@@ -179,22 +189,18 @@ gitToLocalTime posixTime offset =
     utcTime = posixSecondsToUTCTime posixTime
     timezone = minutesToTimeZone offset
 
-data Signature = Signature {
-    signatureName :: String,
-    signatureEmail :: String,
-    signatureWhen :: ZonedTime
-} deriving (Show)
-{#pointer *signature as SignaturePtr -> Signature#}
+{#pointer *signature as Signature foreign finalizer signature_free as signatureFree newtype#}
 instance Storable Signature where
   sizeOf _ = {#sizeof signature#}
   alignment _ = {#alignof signature#}
-  peek p = do
-    name <- peekCString =<< ({#get signature->name #} p)
-    email <- peekCString =<< ({#get signature->email #} p)
-    time <- fromIntegral <$> ({#get signature->when.time #} p)
-    offset <- fromIntegral <$> ({#get signature->when.offset #} p)
-    pure $ Signature name email (gitToLocalTime time offset)
-  poke _ = error "Can't poke Signature"
+  peek = error "Can't peek Signature"
+  poke = error "Can't poke Signature"
+
+peekNewSignature :: Ptr (Ptr Signature) -> IO Signature
+peekNewSignature = peekNew Signature signatureFree
+
+peekSignatureNF :: Ptr Signature -> IO Signature
+peekSignatureNF = fmap Signature . newForeignPtr_
 
 {#pointer *tree as Tree foreign finalizer tree_free as treeFree newtype#}
 
@@ -442,7 +448,7 @@ instance Storable DiffBinary where
 
 {#enum submodule_ignore_t as DiffSubmoduleIgnore {underscoreToCase, upcaseFirstLetter} deriving (Eq, Show)#}
 
-{#pointer *diff_options as DiffOptions foreign newtype#}  -- TODO: Add finalizer
+{#pointer *diff_options as DiffOptions foreign newtype#}
 
 instance Storable DiffOptions where
   sizeOf _ = {#sizeof diff_options#}
@@ -451,7 +457,7 @@ instance Storable DiffOptions where
   poke = error "Can't poke DiffOptions"
 
 peekDiffOptions :: Ptr DiffOptions -> IO DiffOptions
-peekDiffOptions p = DiffOptions <$> (newForeignPtr_ p)
+peekDiffOptions p = DiffOptions <$> (newForeignPtr finalizerFree p)
 
 {#enum diff_find_t as InternalDiffFindFlags {underscoreToCase, upcaseFirstLetter} with prefix = "GIT_DIFF_" add prefix = "internal_diff_" deriving (Eq, Show)#}
 
@@ -496,7 +502,7 @@ diffBreakRewritesForRenamesOnly = fromDiffFindFlagsEnum InternalDiffBreakRewrite
 diffFindRemoveUnmodified :: DiffFindFlag
 diffFindRemoveUnmodified = fromDiffFindFlagsEnum InternalDiffFindRemoveUnmodified
 
-{#pointer *diff_find_options as DiffFindOptions foreign newtype#}  -- TODO: Add finalizer
+{#pointer *diff_find_options as DiffFindOptions foreign newtype#}
 
 instance Storable DiffFindOptions where
   sizeOf _ = {#sizeof diff_find_options#}
@@ -505,4 +511,11 @@ instance Storable DiffFindOptions where
   poke = error "Can't poke DiffFindOptions"
 
 peekDiffFindOptions :: Ptr DiffFindOptions -> IO DiffFindOptions
-peekDiffFindOptions p = DiffFindOptions <$> (newForeignPtr_ p)
+peekDiffFindOptions p = DiffFindOptions <$> (newForeignPtr finalizerFree p)
+
+{#enum config_level_t as ConfigLevel {underscoreToCase, upcaseFirstLetter} deriving (Eq, Show)#}
+
+{#pointer *config as Config foreign finalizer config_free as configFree newtype#}
+
+peekNewConfig :: Ptr (Ptr Config) -> IO Config
+peekNewConfig = peekNew Config configFree

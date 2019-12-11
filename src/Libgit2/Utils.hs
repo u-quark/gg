@@ -28,8 +28,8 @@ module Libgit2.Utils
   , defaultPeekCString
   , errorPeekFCString
   , defaultPeekFCString
-  , fprCtor_
   , IterResult(..)
+  , peekStruct
   , malloca
   , withFunPtr
   , withFunPtrM
@@ -41,13 +41,13 @@ import           Control.Monad (when)
 import           Data.Maybe    (maybeToList)
 import           Foreign       (FinalizerPtr, ForeignPtr, FunPtr, Ptr, Storable,
                                 free, freeHaskellFunPtr, malloc, newForeignPtr,
-                                newForeignPtr_, nullFunPtr, nullPtr, peek)
+                                nullFunPtr, nullPtr, peek, withForeignPtr)
 import           Foreign.C     (CString, peekCString)
 
 peekNew :: (ForeignPtr a -> b) -> FinalizerPtr a -> Ptr (Ptr a) -> IO b
-peekNew haskellConstructor cDestructor ptr = do
+peekNew haskellConstructor cFinalizer ptr = do
   obj <- peek ptr
-  fptr <- newForeignPtr cDestructor obj
+  fptr <- newForeignPtr cFinalizer obj
   pure $ haskellConstructor fptr
 
 errorNullPeek :: Monad m => (Ptr a -> m b) -> String -> Ptr a -> m b
@@ -91,10 +91,13 @@ errorPeekFCString = errorNullPeek peekFCString
 defaultPeekFCString :: String -> CString -> IO String
 defaultPeekFCString = defaultNullPeek peekFCString
 
-fprCtor_ :: (ForeignPtr a -> b) -> Ptr a -> IO b
-fprCtor_ ctor p = do
-  fpr <- newForeignPtr_ p
-  pure $ ctor fpr
+peekStruct :: (Ptr s -> IO a) -> (a -> IO b) -> ForeignPtr s -> IO b
+peekStruct getter outMarshaller fp =
+  withForeignPtr
+    fp
+    (\p -> do
+       cVal <- getter p
+       outMarshaller cVal)
 
 data IterResult
   = IterHasMore
