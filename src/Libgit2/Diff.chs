@@ -79,7 +79,7 @@ import Foreign (Ptr, FunPtr, newForeignPtr_, peek, withForeignPtr, poke, plusPtr
 import Foreign.C (CString, CInt(..), CFloat(..), peekCString, newCString)
 import Libgit2.StrArray (StrArray(..))
 import Libgit2.Errors (checkReturnCode)
-import Libgit2.Utils (malloca, withFunPtr, withFunPtrM, alterAList)
+import Libgit2.Utils (malloca, withFunPtr, withFunPtrM, alterAList, pokeStruct)
 
 
 #include "git2/diff.h"
@@ -207,10 +207,7 @@ diffDefaultOptions :: IO (DiffOptions)
 diffDefaultOptions = diffInitOptions diffOptionsVersion
 
 _pokeDiffOptions :: (Ptr DiffOptions -> b -> IO ()) -> (a -> IO b) -> DiffOptions -> a -> IO ()
-_pokeDiffOptions setter inMarshaller (DiffOptions fp) val =
-  withForeignPtr fp (\p -> do
-    cVal <- inMarshaller val
-    setter p cVal)
+_pokeDiffOptions setter inMarshaller (DiffOptions fp) val = pokeStruct setter inMarshaller fp val
 
 pokeDiffOptionsFlags :: DiffOptions -> DiffOption -> IO ()
 pokeDiffOptionsFlags = _pokeDiffOptions ({#set diff_options->flags#}) (pure . fromDiffOptions)
@@ -311,10 +308,7 @@ diffFindDefaultOptions :: IO (DiffFindOptions)
 diffFindDefaultOptions = diffFindInitOptions diffFindOptionsVersion
 
 _pokeDiffFindOptions :: (Ptr DiffFindOptions -> b -> IO ()) -> (a -> IO b) -> DiffFindOptions -> a -> IO ()
-_pokeDiffFindOptions setter inMarshaller (DiffFindOptions fp) val =
-  withForeignPtr fp (\p -> do
-    cVal <- inMarshaller val
-    setter p cVal)
+_pokeDiffFindOptions setter inMarshaller (DiffFindOptions fp) val = pokeStruct setter inMarshaller fp val
 
 pokeDiffFindFlags :: DiffFindOptions -> DiffFindFlag -> IO ()
 pokeDiffFindFlags = _pokeDiffFindOptions ({#set diff_find_options->flags#}) (pure . fromDiffFindFlags)

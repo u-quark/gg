@@ -34,6 +34,7 @@ module Libgit2.Apply
 import Foreign (alloca, Ptr, FunPtr, malloc, peek, withForeignPtr)
 import Foreign.C (CInt)
 import Libgit2.Errors (checkReturnCode)
+import Libgit2.Utils (pokeStruct)
 
 #include "git2/apply.h"
 
@@ -80,10 +81,7 @@ applyDefaultOptions = do
   pure fp
 
 _pokeApplyOptions :: (Ptr ApplyOptions -> b -> IO ()) -> (a -> IO b) -> ApplyOptions -> a -> IO ()
-_pokeApplyOptions setter inMarshaller (ApplyOptions fp) val =
-  withForeignPtr fp (\p -> do
-    cVal <- inMarshaller val
-    setter p cVal)
+_pokeApplyOptions setter inMarshaller (ApplyOptions fp) val = pokeStruct setter inMarshaller fp val
 
 pokeApplyOptionsVersion :: ApplyOptions -> Int -> IO ()
 pokeApplyOptionsVersion = _pokeApplyOptions ({#set apply_options->version#}) (pure . fromIntegral)

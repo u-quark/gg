@@ -30,6 +30,7 @@ module Libgit2.Utils
   , defaultPeekFCString
   , IterResult(..)
   , peekStruct
+  , pokeStruct
   , malloca
   , withFunPtr
   , withFunPtrM
@@ -98,6 +99,14 @@ peekStruct getter outMarshaller fp =
     (\p -> do
        cVal <- getter p
        outMarshaller cVal)
+
+pokeStruct :: (Ptr s -> b -> IO ()) -> (a -> IO b) -> ForeignPtr s -> a -> IO ()
+pokeStruct setter inMarshaller fp val =
+  withForeignPtr
+    fp
+    (\p -> do
+       cVal <- inMarshaller val
+       setter p cVal)
 
 data IterResult
   = IterHasMore
