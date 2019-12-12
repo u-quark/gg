@@ -16,7 +16,8 @@
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
 module Libgit2
-  ( module Libgit2.Commit
+  ( module Libgit2.Apply
+  , module Libgit2.Commit
   , module Libgit2.Config
   , module Libgit2.Diff
   , module Libgit2.Errors
@@ -31,6 +32,7 @@ module Libgit2
   , module Libgit2.Utils
   ) where
 
+import           Libgit2.Apply
 import           Libgit2.Commit
 import           Libgit2.Config
 import           Libgit2.Diff

@@ -15,15 +15,13 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
-module Libgit2.Signature (
-    gitToLocalTime
+module Libgit2.Signature
+  ( gitToLocalTime
   , signatureName
   , signatureEmail
   , signatureWhen
   , signatureDefault
-)
-
-where
+  ) where
 
 {#import Libgit2.Types#}
 

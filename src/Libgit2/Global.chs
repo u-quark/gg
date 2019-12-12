@@ -15,11 +15,9 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
-module Libgit2.Global (
-    libgit2Init
-)
-
-where
+module Libgit2.Global
+  ( libgit2Init
+  ) where
 
 #include "git2/global.h"
 

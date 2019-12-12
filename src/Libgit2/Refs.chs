@@ -16,8 +16,7 @@
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
 module Libgit2.Refs
-  (
-    referenceShorthand
+  ( referenceShorthand
   , referenceTarget
   , referenceResolve
   ) where

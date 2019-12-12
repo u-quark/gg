@@ -17,8 +17,8 @@
 -}
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Libgit2.Errors (
-    Libgit2Exception(..)
+module Libgit2.Errors
+  ( Libgit2Exception(..)
   , checkReturnCode
   , checkReturnCodeIter
   , intAndCheckReturnCode
@@ -26,9 +26,7 @@ module Libgit2.Errors (
   , ErrorCode(..)
   , ErrorClass(..)
   , errorLast
-)
-
-where
+  ) where
 
 import Control.Monad (liftM)
 import Control.Exception (Exception, throwIO)

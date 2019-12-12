@@ -15,15 +15,13 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
-module Libgit2.OID (
-    OID(..)
+module Libgit2.OID
+  ( OID(..)
   , newOID
   , withOID
   , oidToStrS
   , _oidFromCString
-)
-
-where
+  ) where
 
 import Foreign (Ptr, Storable(..), mallocForeignPtr)
 import Foreign.C (CUChar)

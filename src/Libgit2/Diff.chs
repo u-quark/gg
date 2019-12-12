@@ -18,9 +18,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Libgit2.Diff
-  ( Payload
-  , nullPayload
-  , DiffOption(..)
+  ( DiffOption(..)
   , DiffFlags(..)
   , Filemode(..)
   , DeltaType(..)
@@ -77,7 +75,7 @@ module Libgit2.Diff
 
 import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.Maybe (fromMaybe)
-import Foreign (Ptr, FunPtr, newForeignPtr_, peek, withForeignPtr, poke, plusPtr, alloca, nullPtr)
+import Foreign (Ptr, FunPtr, newForeignPtr_, peek, withForeignPtr, poke, plusPtr, alloca)
 import Foreign.C (CString, CInt(..), CFloat(..), peekCString, newCString)
 import Libgit2.StrArray (StrArray(..))
 import Libgit2.Errors (checkReturnCode)
@@ -88,14 +86,6 @@ import Libgit2.Utils (malloca, withFunPtr, withFunPtrM, alterAList)
 
 {#context lib="git2" prefix="git_"#}
 
-
-newtype Payload = Payload (Ptr ()) deriving Eq
-
-withPayload :: Payload -> (Ptr () -> IO a) -> IO a
-withPayload (Payload payload) action = action payload
-
-nullPayload :: Payload
-nullPayload = Payload nullPtr
 
 type DiffNotifyCb = Diff -> DiffDelta -> String -> Payload -> IO Int
 

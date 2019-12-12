@@ -18,7 +18,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Libgit2.Types
-  ( GitOff
+  ( Payload(..)
+  , nullPayload
+  , withPayload
+  , GitOff
   , Repository(..)
   , peekNewRepository
   , repositoryFree
@@ -137,11 +140,19 @@ module Libgit2.Types
   , peekNewConfig
   , configFree
   , withConfig
+  , Index(..)
+  , peekNewIndex
+  , indexFree
+  , withIndex
+  , ApplyLocation(..)
+  , ApplyOptions(..)
+  , withApplyOptions
+  , peekApplyOptions
 )
 
 where
 
-import Foreign (Ptr, Storable, peek, newForeignPtr, newForeignPtr_, peekByteOff, finalizerFree)
+import Foreign (Ptr, nullPtr, Storable, peek, newForeignPtr, newForeignPtr_, peekByteOff, finalizerFree)
 import Foreign.C (peekCString, peekCStringLen, CUInt, CLong, castCCharToChar)
 import Data.Bits (Bits)
 import Data.Time.LocalTime (ZonedTime, minutesToTimeZone, utcToZonedTime)
@@ -159,8 +170,18 @@ import Libgit2.Utils (peekNew)
 #include <git2/diff.h>
 #include <git2/config.h>
 #include <git2/signature.h>
+#include <git2/index.h>
+#include <git2/apply.h>
 
 {#context lib="git2" prefix="git_"#}
+
+newtype Payload = Payload (Ptr ()) deriving Eq
+
+withPayload :: Payload -> (Ptr () -> IO a) -> IO a
+withPayload (Payload payload) action = action payload
+
+nullPayload :: Payload
+nullPayload = Payload nullPtr
 
 {#pointer *repository as Repository foreign finalizer repository_free as repositoryFree newtype#}
 
@@ -519,3 +540,21 @@ peekDiffFindOptions p = DiffFindOptions <$> (newForeignPtr finalizerFree p)
 
 peekNewConfig :: Ptr (Ptr Config) -> IO Config
 peekNewConfig = peekNew Config configFree
+
+{#pointer *index as Index foreign finalizer index_free as indexFree newtype#}
+
+peekNewIndex :: Ptr (Ptr Index) -> IO Index
+peekNewIndex = peekNew Index indexFree
+
+{#enum apply_location_t as ApplyLocation {underscoreToCase, upcaseFirstLetter} deriving (Eq, Show)#}
+
+{#pointer *apply_options as ApplyOptions foreign newtype#}
+
+instance Storable ApplyOptions where
+  sizeOf _ = {#sizeof apply_options#}
+  alignment _ = {#alignof apply_options#}
+  peek = error "Can't peek ApplyOptions"
+  poke = error "Can't poke ApplyOptions"
+
+peekApplyOptions :: Ptr ApplyOptions -> IO ApplyOptions
+peekApplyOptions p = ApplyOptions <$> (newForeignPtr finalizerFree p)

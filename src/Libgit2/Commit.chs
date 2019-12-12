@@ -15,8 +15,8 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
-module Libgit2.Commit (
-    commitLookup
+module Libgit2.Commit
+  ( commitLookup
   , commitId
   , commitMessageEncoding
   , commitMessage
@@ -28,9 +28,7 @@ module Libgit2.Commit (
   , commitParentcount
   , commitParent
   , commitTree
-)
-
-where
+  ) where
 
 {#import Libgit2.Types#}
 {#import Libgit2.OID#}

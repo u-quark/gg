@@ -15,12 +15,10 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
-module Libgit2.Config (
-    configOpenDefault
+module Libgit2.Config
+  ( configOpenDefault
   , configOpenLevel
-)
-
-where
+  ) where
 
 {#import Libgit2.Types#}
 

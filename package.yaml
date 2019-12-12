@@ -64,6 +64,7 @@ library:
     - Libgit2.StrArray
     - Libgit2.Config
     - Libgit2.Signature
+    - Libgit2.Apply
 
 executables:
   gg:

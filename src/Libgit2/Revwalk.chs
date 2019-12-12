@@ -17,8 +17,8 @@
 -}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Libgit2.Revwalk (
-    SortFlags
+module Libgit2.Revwalk
+  ( SortFlags
   , sortNone
   , sortTopological
   , sortTime
@@ -27,9 +27,7 @@ module Libgit2.Revwalk (
   , revwalkSorting
   , revwalkNext
   , revwalkPushHead
-)
-
-where
+  ) where
 
 {#import Libgit2.Types#}
 {#import Libgit2.OID#}

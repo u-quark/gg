@@ -17,8 +17,8 @@
 -}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Libgit2.Repository (
-    repositoryOpen
+module Libgit2.Repository
+  ( repositoryOpen
   , repositoryOpenExt
   , repositoryOpenNoFlags
   , repositoryOpenNoSearch
@@ -27,9 +27,7 @@ module Libgit2.Repository (
   , repositoryOpenNoDotgit
   , repositoryOpenFromEnv
   , repositoryHead
-)
-
-where
+  ) where
 
 {#import Libgit2.Types#}
 
