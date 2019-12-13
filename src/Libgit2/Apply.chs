@@ -31,7 +31,7 @@ module Libgit2.Apply
 
 {#import Libgit2.Types#}
 
-import Foreign (alloca, Ptr, FunPtr, malloc, peek, withForeignPtr)
+import Foreign (alloca, Ptr, FunPtr, malloc, peek)
 import Foreign.C (CInt)
 import Libgit2.Errors (checkReturnCode)
 import Libgit2.Utils (pokeStruct)
