@@ -22,12 +22,13 @@ module Libgit2.Utils
   , peekF
   , peekFCString
   , errorNullPeek
-  , maybeNullPeek
   , defaultNullPeek
   , errorPeekCString
   , defaultPeekCString
   , errorPeekFCString
   , defaultPeekFCString
+  , maybeWithCString
+  , withManyArray
   , IterResult(..)
   , peekStruct
   , pokeStruct
@@ -41,9 +42,10 @@ module Libgit2.Utils
 import           Control.Monad (when)
 import           Data.Maybe    (maybeToList)
 import           Foreign       (FinalizerPtr, ForeignPtr, FunPtr, Ptr, Storable,
-                                free, freeHaskellFunPtr, malloc, newForeignPtr,
-                                nullFunPtr, nullPtr, peek, withForeignPtr)
-import           Foreign.C     (CString, peekCString)
+                                free, freeHaskellFunPtr, malloc, maybeWith,
+                                newForeignPtr, nullFunPtr, nullPtr, peek,
+                                withArray, withForeignPtr, withMany)
+import           Foreign.C     (CString, peekCString, withCString)
 
 peekNew :: (ForeignPtr a -> b) -> FinalizerPtr a -> Ptr (Ptr a) -> IO b
 peekNew haskellConstructor cFinalizer ptr = do
@@ -57,14 +59,6 @@ errorNullPeek peekFn errorMsg pointer =
     then peekFn pointer
     else error errorMsg
 
-maybeNullPeek :: Monad m => (Ptr a -> m b) -> Ptr a -> m (Maybe b)
-maybeNullPeek peekFn pointer =
-  if pointer /= nullPtr
-    then do
-      result <- peekFn pointer
-      pure $ Just result
-    else pure Nothing
-
 defaultNullPeek :: Monad m => (Ptr a -> m b) -> b -> Ptr a -> m b
 defaultNullPeek peekFn defaultValue pointer =
   if pointer /= nullPtr
@@ -76,6 +70,9 @@ errorPeekCString = errorNullPeek peekCString
 
 defaultPeekCString :: String -> CString -> IO String
 defaultPeekCString = defaultNullPeek peekCString
+
+maybeWithCString :: Maybe String -> (CString -> IO ()) -> IO ()
+maybeWithCString = maybeWith withCString
 
 peekF :: (Ptr a -> IO b) -> Ptr a -> IO b
 peekF peekFn p = do
@@ -91,6 +88,9 @@ errorPeekFCString = errorNullPeek peekFCString
 
 defaultPeekFCString :: String -> CString -> IO String
 defaultPeekFCString = defaultNullPeek peekFCString
+
+withManyArray :: Storable s => (a -> (s -> IO b) -> IO b) -> [a] -> (Ptr s -> IO b) -> IO b
+withManyArray withFoo xs f = withMany withFoo xs (`withArray` f)
 
 peekStruct :: (Ptr s -> IO a) -> (a -> IO b) -> ForeignPtr s -> IO b
 peekStruct getter outMarshaller fp =

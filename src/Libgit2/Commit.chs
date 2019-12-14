@@ -25,19 +25,21 @@ module Libgit2.Commit
   , commitTime
   , commitAuthor
   , commitCommitter
-  , commitParentcount
+  , commitParentCount
   , commitParent
+  , commitParents
   , commitTree
+  , commitCreate
   ) where
 
 {#import Libgit2.Types#}
 {#import Libgit2.OID#}
 
-import Foreign (alloca)
+import Foreign (alloca, Ptr)
 import Foreign.C (CString)
 import Data.Time.LocalTime (ZonedTime)
 import Libgit2.Errors (checkReturnCode)
-import Libgit2.Utils (defaultPeekCString, errorPeekCString)
+import Libgit2.Utils (defaultPeekCString, errorPeekCString, maybeWithCString, withManyArray)
 
 #include "git2/commit.h"
 
@@ -78,8 +80,24 @@ commitTime commit = do
 
 {#fun commit_author as commitAuthor { `Commit' } -> `Signature' peekSignatureNF*#}
 
-{#fun commit_parentcount as commitParentcount { `Commit' } -> `Int'#}
+{#fun commit_parentcount as commitParentCount { `Commit' } -> `Int'#}
 
 {#fun commit_parent as commitParent { alloca- `Commit' peekNewCommit*, `Commit', `Int' } -> `Int' checkReturnCode*-#}
 
+commitParents :: Commit -> IO [Commit]
+commitParents c = do
+  parentCount <- commitParentCount c
+  traverse (commitParent c) [0..(parentCount - 1)]
+
 {#fun commit_tree as commitTree { alloca- `Tree' peekNewTree*, `Commit' } -> `Int' checkReturnCode*-#}
+
+withArrayCommit :: [Commit] -> (Ptr (Ptr Commit) -> IO ()) -> IO ()
+withArrayCommit = withManyArray withCommit
+
+{#fun commit_create as _commitCreate { `OID', `Repository', maybeWithCString* `Maybe String', `Signature', `Signature', `String', `String', `Tree', `Int', withArrayCommit* `[Commit]' } -> `Int' checkReturnCode*-#}
+
+commitCreate :: Repository -> Maybe String -> Signature -> Signature -> String -> String -> Tree -> Int -> [Commit] -> IO OID
+commitCreate repository update_ref author committer message_encoding message tree parent_count parents = do
+  oid <- newOID
+  _commitCreate oid repository update_ref author committer message_encoding message tree parent_count parents
+  pure oid

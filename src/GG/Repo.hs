@@ -35,7 +35,7 @@ import qualified GG.State       as S
 import           Libgit2        (Commit, DiffInfo, DiffStats, OID, Reference,
                                  Repository, commitAuthor, commitBody,
                                  commitCommitter, commitId, commitLookup,
-                                 commitParent, commitParentcount, commitSummary,
+                                 commitParent, commitParentCount, commitSummary,
                                  commitTree, diffDefaultOptions, diffFindAll,
                                  diffFindDefaultOptions, diffFindSimilar,
                                  diffGetStats, diffInfo, diffTreeToTree,
@@ -85,7 +85,7 @@ readNCommits n leaf = loop 0 leaf []
       if i == n
         then pure (reverse acc, c)
         else do
-          parentCount <- commitParentcount c
+          parentCount <- commitParentCount c
           if parentCount == 0
             then pure (reverse acc, c)
             else do

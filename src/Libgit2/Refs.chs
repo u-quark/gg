@@ -24,9 +24,8 @@ module Libgit2.Refs
 {#import Libgit2.Types#}
 {#import Libgit2.OID#}
 
-import Foreign (alloca, Ptr, newForeignPtr_)
+import Foreign (alloca, Ptr, newForeignPtr_, maybePeek)
 import Libgit2.Errors (checkReturnCode)
-import Libgit2.Utils (maybeNullPeek)
 
 #include "git2/refs.h"
 
@@ -35,7 +34,7 @@ import Libgit2.Utils (maybeNullPeek)
 {#fun reference_shorthand as referenceShorthand { `Reference' } -> `String'#}
 
 maybeNullOID :: Ptr OID -> IO (Maybe OID)
-maybeNullOID = maybeNullPeek (fmap OID . newForeignPtr_)
+maybeNullOID = maybePeek (fmap OID . newForeignPtr_)
 
 {#fun reference_target as referenceTarget { `Reference' } -> `Maybe OID' maybeNullOID*#}
 
