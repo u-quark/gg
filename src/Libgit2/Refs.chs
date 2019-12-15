@@ -19,6 +19,8 @@ module Libgit2.Refs
   ( referenceShorthand
   , referenceTarget
   , referenceResolve
+  , referenceLookup
+  , referenceSetTarget
   ) where
 
 {#import Libgit2.Types#}
@@ -39,3 +41,7 @@ maybeNullOID = maybePeek (fmap OID . newForeignPtr_)
 {#fun reference_target as referenceTarget { `Reference' } -> `Maybe OID' maybeNullOID*#}
 
 {#fun reference_resolve as referenceResolve {  alloca- `Reference' peekNewReference*, `Reference' } -> `Int' checkReturnCode*-#}
+
+{#fun reference_lookup as referenceLookup {  alloca- `Reference' peekNewReference*, `Repository', `String' } -> `Int' checkReturnCode*-#}
+
+{#fun reference_set_target as referenceSetTarget {  alloca- `Reference' peekNewReference*, `Reference', `OID', `String' } -> `Int' checkReturnCode*-#}

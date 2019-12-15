@@ -15,36 +15,18 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
-module Libgit2.Index
-  ( indexHasConflicts
-  , indexWriteTree
-  , indexWriteTreeTo
+module Libgit2.Tree
+  ( treeLookup
   ) where
 
 {#import Libgit2.Types#}
 {#import Libgit2.OID#}
 
-import qualified Foreign.Ptr as C2HSImp
+import Foreign (alloca)
 import Libgit2.Errors (checkReturnCode)
 
-#include "git2/index.h"
+#include "git2/tree.h"
 
 {#context lib="git2" prefix="git_"#}
 
-{#fun index_has_conflicts as indexHasConflicts { `Index' } -> `Bool'#}
-
-{#fun index_write_tree as _indexWriteTree { `OID', `Index' } -> `Int' checkReturnCode*-#}
-
-indexWriteTree :: Index -> IO OID
-indexWriteTree index = do
-  oid <- newOID
-  _indexWriteTree oid index
-  pure oid
-
-{#fun index_write_tree_to as _indexWriteTreeTo { `OID', `Index', `Repository' } -> `Int' checkReturnCode*-#}
-
-indexWriteTreeTo :: Index -> Repository -> IO OID
-indexWriteTreeTo index repository = do
-  oid <- newOID
-  _indexWriteTreeTo oid index repository
-  pure oid
+{#fun tree_lookup as treeLookup { alloca- `Tree' peekNewTree*, `Repository', `OID' } -> `Int' checkReturnCode*-#}

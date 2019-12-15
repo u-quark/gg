@@ -29,6 +29,7 @@ module Libgit2
   , module Libgit2.Revwalk
   , module Libgit2.Signature
   , module Libgit2.StrArray
+  , module Libgit2.Tree
   , module Libgit2.Types
   , module Libgit2.Utils
   ) where
@@ -46,5 +47,6 @@ import           Libgit2.Repository
 import           Libgit2.Revwalk
 import           Libgit2.Signature
 import           Libgit2.StrArray
+import           Libgit2.Tree
 import           Libgit2.Types
 import           Libgit2.Utils

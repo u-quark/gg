@@ -22,30 +22,33 @@ module GG.Repo
   , readCommit
   , readCommitDiff
   , Action
-  , doRebase
+  , ActionOutcome(..)
+  , doAction
   , moveCommitUp
   , moveCommitDown
+  , squashCommit
   , fixupCommit
   ) where
 
-import           Data.Char      (toLower)
-import           Data.List      (intercalate)
-import           Data.Maybe     (fromJust)
-import qualified GG.State       as S
-import           Libgit2        (Commit, DiffInfo, DiffStats, OID, Reference,
-                                 Repository, commitAuthor, commitBody,
-                                 commitCommitter, commitId, commitLookup,
-                                 commitParent, commitParentCount, commitSummary,
-                                 commitTree, diffDefaultOptions, diffFindAll,
-                                 diffFindDefaultOptions, diffFindSimilar,
-                                 diffGetStats, diffInfo, diffTreeToTree,
-                                 libgit2Init, pokeDiffFindFlags,
-                                 referenceResolve, referenceShorthand,
-                                 referenceTarget, repositoryHead,
-                                 repositoryOpenExt, repositoryOpenNoFlags,
-                                 signatureEmail, signatureName, signatureWhen)
-import           System.Exit    (ExitCode (..))
-import           System.Process (readCreateProcessWithExitCode, shell)
+import           Control.Exception (try)
+import           Data.Maybe        (fromJust)
+import qualified GG.State          as S
+import           Libgit2           (Commit, DiffInfo, DiffStats,
+                                    Libgit2Exception (..), OID, Reference,
+                                    Repository, commitAuthor, commitBody,
+                                    commitCommitter, commitId, commitLookup,
+                                    commitParent, commitParentCount,
+                                    commitSummary, commitTree,
+                                    diffDefaultOptions, diffFindAll,
+                                    diffFindDefaultOptions, diffFindSimilar,
+                                    diffGetStats, diffInfo, diffTreeToTree,
+                                    libgit2Init, pokeDiffFindFlags,
+                                    referenceResolve, referenceShorthand,
+                                    referenceTarget, repositoryHead,
+                                    repositoryOpenExt, repositoryOpenNoFlags,
+                                    signatureEmail, signatureName,
+                                    signatureWhen)
+import qualified Libgit2           as G
 
 readCommit :: Commit -> IO S.Commit
 readCommit commit = do
@@ -110,66 +113,115 @@ readRepoState repo = do
   commit <- refToCommit repo headRef
   pure (branch, commit)
 
-system :: String -> IO ExitCode
-system cmd = do
-  (exitCode, _, _) <- readCreateProcessWithExitCode (shell cmd) ""
-  pure exitCode
+data ActionOutcome
+  = Success
+      { newCursorPosition :: Int
+      }
+  | InvalidAction
+  | ApplyFailed
+      { conflictMessage :: String
+      }
 
-doRebase :: [String] -> Int -> Action -> IO (Maybe Int)
-doRebase commitHashes pos action = do
-  let aM = action commitHashes pos
+doAction :: G.Repository -> String -> [G.OID] -> Int -> Action -> IO ActionOutcome
+doAction repo branch commitOIDs pos action = do
+  let aM = action commitOIDs pos
   case aM of
-    Just (newPos, upto, commitCommands) -> do
-      let cmd = formatRebaseCommand upto commitCommands
-      rc <- system cmd
-      case rc of
-        ExitSuccess -> pure $ Just newPos
-        ExitFailure _ -> do
-          _ <- system "git rebase --abort"
-          pure Nothing
-    Nothing -> pure Nothing
+    Just (Plan base commands newPos) -> do
+      res <- loop base commands
+      case res of
+        Right oid -> do
+          ref <- G.referenceLookup repo "refs/heads/master"
+          _ <- G.referenceSetTarget ref oid "gg - apply"
+          pure $ Success newPos
+        Left message -> pure $ ApplyFailed message
+    Nothing -> pure InvalidAction
+  where
+    loop baseOid [] = pure $ Right baseOid
+    loop baseOid (c:cs) = do
+      res <- doCommand c repo baseOid
+      case res of
+        Right newBaseOid -> loop newBaseOid cs
+        Left _           -> pure res
 
-data RebaseCommand
-  = Pick
-  | Fixup
-  deriving (Show)
+doCommand :: Command -> G.Repository -> G.OID -> IO (Either String G.OID)
+doCommand (Apply oid) repo baseOid = do
+  commit <- G.commitLookup repo oid
+  parentCount <- G.commitParentCount commit
+  summary <- G.commitSummary commit
+  if parentCount > 1
+    then pure $ Left $ "Can not apply merge commit \"" <> summary <> "\""
+    else do
+      tree <- G.commitTree commit
+      parentCommit <- G.commitParent commit 0
+      parentTree <- G.commitTree parentCommit
+      diffOptions <- G.diffDefaultOptions
+      diff <- G.diffTreeToTree repo parentTree tree diffOptions
+      baseCommit <- G.commitLookup repo baseOid
+      baseTree <- G.commitTree baseCommit
+      applyOptions <- G.applyDefaultOptions
+      indexE <- try $ G.applyToTree repo baseTree diff applyOptions
+      case indexE of
+        Left (Libgit2Exception _ _) -> pure $ Left $ "Conflicts applying commit \"" <> summary <> "\""
+        Right index -> do
+          message <- G.commitMessage commit
+          author <- G.commitAuthor commit
+          committer <- G.signatureDefault repo
+          newTreeOid <- G.indexWriteTreeTo index repo
+          newTree <- G.treeLookup repo newTreeOid
+          newCommitOid <- G.commitCreate repo Nothing author committer "UTF-8" message newTree 1 [baseCommit]
+          pure $ Right newCommitOid
 
-type Action = [String] -> Int -> Maybe (Int, Int, [(RebaseCommand, String)])
+data MessageSquashStrategy
+  = KeepBase
+  | MergeAtBottom
+
+data Command
+  -- Apply commit
+  = Apply G.OID
+  -- Squash commit messageStrategy
+  | Squash G.OID MessageSquashStrategy
+
+data Plan =
+  Plan G.OID [Command] Int
+  -- Plan baseCommit commands newCursorPosition
+
+type Action = [G.OID] -> Int -> Maybe Plan
 
 moveCommitUp :: Action
-moveCommitUp commitHashes pos =
+moveCommitUp commitOIDs pos =
   case pos of
     x
-      | x >= 1 -> Just (pos - 1, noCommitsToRebase, reverse $ theRest <> lastTwo)
+      | x >= 1 -> Just $ Plan base (reverse $ theRest <> lastTwo) (pos - 1)
     _ -> Nothing
   where
-    noCommitsToRebase = pos + 1
-    lastTwo = [(Pick, commitHashes !! pos), (Pick, commitHashes !! (pos - 1))]
-    theRest = [(Pick, c) | c <- take (pos - 1) commitHashes]
+    base = commitOIDs !! (pos + 1)
+    lastTwo = [Apply $ commitOIDs !! pos, Apply $ commitOIDs !! (pos - 1)]
+    theRest = [Apply c | c <- take (pos - 1) commitOIDs]
 
 moveCommitDown :: Action
-moveCommitDown commitHashes pos =
+moveCommitDown commitOIDs pos =
   case pos of
     x
-      | x < length commitHashes -> Just (pos + 1, noCommitsToRebase, reverse $ theRest <> lastTwo)
+      | x < length commitOIDs -> Just $ Plan base (reverse $ theRest <> lastTwo) (pos + 1)
     _ -> Nothing
   where
-    noCommitsToRebase = pos + 2
-    lastTwo = [(Pick, commitHashes !! (pos + 1)), (Pick, commitHashes !! pos)]
-    theRest = [(Pick, c) | c <- take pos commitHashes]
+    base = commitOIDs !! (pos + 2)
+    lastTwo = [Apply $ commitOIDs !! (pos + 1), Apply $ commitOIDs !! pos]
+    theRest = [Apply c | c <- take pos commitOIDs]
+
+_squashCommit :: MessageSquashStrategy -> Action
+_squashCommit mss commitOIDs pos =
+  case pos of
+    x
+      | x < length commitOIDs -> Just $ Plan base (reverse $ theRest <> lastTwo) pos
+    _ -> Nothing
+  where
+    base = commitOIDs !! (pos + 2)
+    lastTwo = [Squash (commitOIDs !! pos) mss, Apply $ commitOIDs !! (pos + 1)]
+    theRest = [Apply c | c <- take pos commitOIDs]
+
+squashCommit :: Action
+squashCommit = _squashCommit MergeAtBottom
 
 fixupCommit :: Action
-fixupCommit commitHashes pos =
-  case pos of
-    x
-      | x < length commitHashes -> Just (pos, noCommitsToRebase, reverse $ theRest <> lastTwo)
-    _ -> Nothing
-  where
-    noCommitsToRebase = pos + 2
-    lastTwo = [(Fixup, commitHashes !! pos), (Pick, commitHashes !! (pos + 1))]
-    theRest = [(Pick, c) | c <- take pos commitHashes]
-
-formatRebaseCommand :: Int -> [(RebaseCommand, String)] -> String
-formatRebaseCommand upto commitCommands = "GIT_EDITOR='echo " <> commitsStr <> " >$1' git rebase -i HEAD~" <> show upto
-  where
-    commitsStr = intercalate "\\\\n" [map toLower (show c) <> " " <> h | (c, h) <- commitCommands]
+fixupCommit = _squashCommit KeepBase

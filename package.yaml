@@ -66,6 +66,7 @@ library:
     - Libgit2.Signature
     - Libgit2.Apply
     - Libgit2.Index
+    - Libgit2.Tree
 
 executables:
   gg:

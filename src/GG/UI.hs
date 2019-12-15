@@ -56,10 +56,10 @@ import           Data.Time                     (ZonedTime, defaultTimeLocale,
                                                 zonedTimeToLocalTime,
                                                 zonedTimeZone)
 import           Data.Vector                   (toList)
-import           GG.Repo                       (Action, doRebase, fixupCommit,
-                                                moveCommitDown, moveCommitUp,
-                                                readCommit, readCommitDiff,
-                                                readNCommits, readRepoState)
+import           GG.Repo                       (Action, readCommit,
+                                                readCommitDiff, readNCommits,
+                                                readRepoState)
+import qualified GG.Repo                       as R
 import           GG.State                      (Commit, Name (..), OpenCommit,
                                                 State (..), addMoreCommits,
                                                 closeCommitDetails, commitL,
@@ -113,9 +113,9 @@ handleEvent :: State -> BrickEvent Name Event -> EventM Name (Next State)
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'q') [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEnter [])) = openCommitAction s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doRebaseAction moveCommitUp s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doRebaseAction moveCommitDown s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doRebaseAction fixupCommit s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doAction R.moveCommitUp s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doAction R.moveCommitDown s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doAction R.fixupCommit s
 handleEvent s (VtyEvent ev) = handleScrolling s ev
 handleEvent s _ = continue s
 
@@ -164,20 +164,20 @@ checkNeedsMoreCommits s =
       pure $ addMoreCommits moreCommitsState contCommit' s
     else pure s
 
-doRebaseAction :: Action -> State -> EventM Name (Next State)
-doRebaseAction a s = do
+doAction :: Action -> State -> EventM Name (Next State)
+doAction a s = do
   s' <-
     liftIO $ do
-      let commitHashes = map (^. field @"oid" . to show) (s ^. field @"commitList" . L.listElementsL . to toList)
+      let commitOIDs = map (^. field @"oid") (s ^. field @"commitList" . L.listElementsL . to toList)
       let pos = s ^. field @"commitList" . L.listSelectedL . to (fromMaybe 0)
-      newPosM <- doRebase commitHashes pos a
-      case newPosM of
-        Just newPos -> do
+      result <- R.doAction (s ^. field @"repository") (s ^. field @"branchName") commitOIDs pos a
+      case result of
+        R.Success newPos -> do
           (branch, headCommit) <- readRepoState $ s ^. field @"repository"
           (tailCommits, contCommit') <- readNCommits (pos + 500) headCommit
           moreCommitsState <- mapM readCommit (headCommit : tailCommits)
           pure $ (updateRepoState contCommit' branch moreCommitsState . updateCommitsPos newPos) s
-        Nothing -> pure s
+        _ -> pure s
   continue s'
 
 defaultAttr :: AttrName

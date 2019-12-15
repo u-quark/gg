@@ -31,7 +31,7 @@ module Libgit2.Apply
 
 {#import Libgit2.Types#}
 
-import Foreign (alloca, Ptr, FunPtr, malloc, peek)
+import Foreign (alloca, Ptr, FunPtr, malloc, peek, nullPtr, nullFunPtr)
 import Foreign.C (CInt)
 import Libgit2.Errors (checkReturnCode)
 import Libgit2.Utils (pokeStruct)
@@ -78,6 +78,10 @@ applyDefaultOptions = do
   p <- malloc
   fp <- peekApplyOptions p
   pokeApplyOptionsVersion fp applyOptionsVersion
+  _pokeApplyOptions ({#set apply_options->delta_cb#}) pure fp nullFunPtr
+  _pokeApplyOptions ({#set apply_options->hunk_cb#}) pure fp nullFunPtr
+  _pokeApplyOptions ({#set apply_options->payload#}) pure fp nullPtr
+  _pokeApplyOptions ({#set apply_options->flags#}) pure fp 0
   pure fp
 
 _pokeApplyOptions :: (Ptr ApplyOptions -> b -> IO ()) -> (a -> IO b) -> ApplyOptions -> a -> IO ()
