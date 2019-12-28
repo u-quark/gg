@@ -106,12 +106,12 @@ refToCommit repo ref = do
   oid <- fromJust <$> referenceTarget ref'
   commitLookup repo oid
 
-readRepoState :: Repository -> IO (String, Commit)
+readRepoState :: Repository -> IO (S.Reference, Commit)
 readRepoState repo = do
   headRef <- repositoryHead repo
-  branch <- referenceShorthand headRef
+  headName <- referenceShorthand headRef
   commit <- refToCommit repo headRef
-  pure (branch, commit)
+  pure (S.Reference headRef headName, commit)
 
 data ActionOutcome
   = Success
@@ -122,15 +122,14 @@ data ActionOutcome
       { conflictMessage :: String
       }
 
-doAction :: G.Repository -> String -> [G.OID] -> Int -> Action -> IO ActionOutcome
-doAction repo branch commitOIDs pos action = do
+doAction :: G.Repository -> G.Reference -> [G.OID] -> Int -> Action -> IO ActionOutcome
+doAction repo ref commitOIDs pos action = do
   let aM = action commitOIDs pos
   case aM of
     Just (Plan base commands newPos) -> do
       res <- loop base commands
       case res of
         Right oid -> do
-          ref <- G.referenceLookup repo "refs/heads/master"
           _ <- G.referenceSetTarget ref oid "gg - apply"
           pure $ Success newPos
         Left message -> pure $ ApplyFailed message

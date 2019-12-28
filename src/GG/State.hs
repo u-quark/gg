@@ -31,6 +31,7 @@ import           Data.Time                    (ZonedTime)
 import qualified Data.Vector                  as Vec
 import           GHC.Generics                 (Generic)
 import qualified Libgit2                      as G
+import           Prelude                      hiding (head)
 
 data Name
   = CommitListUI
@@ -53,6 +54,13 @@ data Commit =
     }
   deriving (Generic)
 
+data Reference =
+  Reference
+    { ref       :: G.Reference
+    , shorthand :: String
+    }
+  deriving (Generic)
+
 data OpenCommit =
   OpenCommit
     { openCommitIndex :: Int
@@ -65,20 +73,20 @@ data OpenCommit =
 data State =
   State
     { commitList :: L.List Name Commit
-    , branchName :: String
+    , head       :: Reference
     , repository :: G.Repository
     , contCommit :: G.Commit
     , openCommit :: Maybe OpenCommit
     }
   deriving (Generic)
 
-initState :: G.Repository -> G.Commit -> String -> [Commit] -> State
-initState repo commit branch l = State (L.list CommitListUI (Vec.fromList l) 1) branch repo commit Nothing
+initState :: G.Repository -> G.Commit -> Reference -> [Commit] -> State
+initState repo commit head_ l = State (L.list CommitListUI (Vec.fromList l) 1) head_ repo commit Nothing
 
-updateRepoState :: G.Commit -> String -> [Commit] -> State -> State
-updateRepoState commit branch l =
+updateRepoState :: G.Commit -> Reference -> [Commit] -> State -> State
+updateRepoState commit head_ l =
   set (field @"commitList" . L.listElementsL) (Vec.fromList l) .
-  set (field @"contCommit") commit . set (field @"branchName") branch
+  set (field @"contCommit") commit . set (field @"head") head_
 
 addMoreCommits :: [Commit] -> G.Commit -> State -> State
 addMoreCommits moreCommits newContCommit =

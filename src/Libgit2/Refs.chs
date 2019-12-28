@@ -16,7 +16,8 @@
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
 module Libgit2.Refs
-  ( referenceShorthand
+  ( referenceName
+  , referenceShorthand
   , referenceTarget
   , referenceResolve
   , referenceLookup
@@ -32,6 +33,8 @@ import Libgit2.Errors (checkReturnCode)
 #include "git2/refs.h"
 
 {#context lib="git2" prefix="git_"#}
+
+{#fun reference_name as referenceName { `Reference' } -> `String'#}
 
 {#fun reference_shorthand as referenceShorthand { `Reference' } -> `String'#}
 

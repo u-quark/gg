@@ -89,6 +89,7 @@ import           Libgit2                       (DeltaInfo, DeltaType (..),
                                                 diffStatsDeletions,
                                                 diffStatsFilesChanged,
                                                 diffStatsInsertions)
+import           Prelude                       hiding (head)
 import           System.Environment            (lookupEnv, setEnv)
 
 data Event
@@ -171,13 +172,13 @@ doAction a s = do
     liftIO $ do
       let commitOIDs = map (^. field @"oid") (s ^. field @"commitList" . L.listElementsL . to toList)
       let pos = s ^. field @"commitList" . L.listSelectedL . to (fromMaybe 0)
-      result <- R.doAction (s ^. field @"repository") (s ^. field @"branchName") commitOIDs pos a
+      result <- R.doAction (s ^. field @"repository") (s ^. field @"head" . field @"ref") commitOIDs pos a
       case result of
         R.Success newPos -> do
-          (branch, headCommit) <- readRepoState $ s ^. field @"repository"
+          (head, headCommit) <- readRepoState $ s ^. field @"repository"
           (tailCommits, contCommit') <- readNCommits (pos + 500) headCommit
           moreCommitsState <- mapM readCommit (headCommit : tailCommits)
-          pure $ (updateRepoState contCommit' branch moreCommitsState . updateCommitsPos newPos) s
+          pure $ (updateRepoState contCommit' head moreCommitsState . updateCommitsPos newPos) s
         _ -> pure s
   continue s'
 
@@ -294,7 +295,8 @@ drawUI s = [ui]
         , maybe emptyWidget (withAttr defaultAttr . padBottom Max . drawOpenCommit) (s ^. field @"openCommit")
         , withAttr
             statusBarAttr
-            (withAttr statusBranchAttr (str ("On " <> s ^. field @"branchName")) <+> padRight Max (str " "))
+            (withAttr statusBranchAttr (str ("On " <> s ^. field @"head" . field @"shorthand")) <+>
+             padRight Max (str " "))
         ]
 
 openCommitAction :: State -> EventM Name (Next State)
