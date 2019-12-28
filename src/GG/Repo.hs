@@ -173,8 +173,7 @@ doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
                 if isSquash
                   then baseCommitParents
                   else [baseCommit]
-          newCommitOid <-
-            G.commitCreate repo Nothing author committer "UTF-8" message newTree (length newParents) newParents
+          newCommitOid <- G.commitCreate repo Nothing author committer "UTF-8" message newTree newParents
           pure $ Right newCommitOid
 
 squashCommitInfo :: MessageSquashStrategy -> String -> String -> G.Signature -> G.Signature -> IO (String, G.Signature)

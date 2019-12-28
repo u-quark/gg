@@ -96,8 +96,8 @@ withArrayCommit = withManyArray withCommit
 
 {#fun commit_create as _commitCreate { `OID', `Repository', maybeWithCString* `Maybe String', `Signature', `Signature', `String', `String', `Tree', `Int', withArrayCommit* `[Commit]' } -> `Int' checkReturnCode*-#}
 
-commitCreate :: Repository -> Maybe String -> Signature -> Signature -> String -> String -> Tree -> Int -> [Commit] -> IO OID
-commitCreate repository update_ref author committer message_encoding message tree parent_count parents = do
+commitCreate :: Repository -> Maybe String -> Signature -> Signature -> String -> String -> Tree -> [Commit] -> IO OID
+commitCreate repository update_ref author committer message_encoding message tree parents = do
   oid <- newOID
-  _commitCreate oid repository update_ref author committer message_encoding message tree parent_count parents
+  _commitCreate oid repository update_ref author committer message_encoding message tree (length parents) parents
   pure oid
