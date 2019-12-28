@@ -38,7 +38,7 @@ module Libgit2.Diff
   , wrapDiffHunkCb
   , wrapDiffLineCb
   , diffOptionsVersion
-  , diffInitOptions
+  , diffOptionsInit
   , diffDefaultOptions
   , pokeDiffOptionsFlags
   , pokeDiffOptionsIgnoreSubmodules
@@ -52,7 +52,7 @@ module Libgit2.Diff
   , pokeDiffOptionsOldPrefix
   , pokeDiffOptionsNewPrefix
   , diffFindOptionsVersion
-  , diffFindInitOptions
+  , diffFindOptionsInit
   , diffFindDefaultOptions
   , pokeDiffFindFlags
   , pokeDiffFindRenameThreshold
@@ -201,10 +201,10 @@ withDiffLineCbM = withFunPtrM wrapDiffLineCb
 diffOptionsVersion :: Int
 diffOptionsVersion = {#const GIT_DIFF_OPTIONS_VERSION#}
 
-{#fun diff_init_options as diffInitOptions { malloca- `DiffOptions' peekDiffOptions*, `Int' } -> `Int' checkReturnCode*-#}
+{#fun diff_options_init as diffOptionsInit { malloca- `DiffOptions' peekDiffOptions*, `Int' } -> `Int' checkReturnCode*-#}
 
 diffDefaultOptions :: IO (DiffOptions)
-diffDefaultOptions = diffInitOptions diffOptionsVersion
+diffDefaultOptions = diffOptionsInit diffOptionsVersion
 
 _pokeDiffOptions :: (Ptr DiffOptions -> b -> IO ()) -> (a -> IO b) -> DiffOptions -> a -> IO ()
 _pokeDiffOptions setter inMarshaller (DiffOptions fp) val = pokeStruct setter inMarshaller fp val
@@ -302,10 +302,10 @@ diffInfo diff = do
 diffFindOptionsVersion :: Int
 diffFindOptionsVersion = {#const GIT_DIFF_FIND_OPTIONS_VERSION#}
 
-{#fun diff_find_init_options as diffFindInitOptions { malloca- `DiffFindOptions' peekDiffFindOptions*, `Int' } -> `Int' checkReturnCode*-#}
+{#fun diff_find_options_init as diffFindOptionsInit { malloca- `DiffFindOptions' peekDiffFindOptions*, `Int' } -> `Int' checkReturnCode*-#}
 
 diffFindDefaultOptions :: IO (DiffFindOptions)
-diffFindDefaultOptions = diffFindInitOptions diffFindOptionsVersion
+diffFindDefaultOptions = diffFindOptionsInit diffFindOptionsVersion
 
 _pokeDiffFindOptions :: (Ptr DiffFindOptions -> b -> IO ()) -> (a -> IO b) -> DiffFindOptions -> a -> IO ()
 _pokeDiffFindOptions setter inMarshaller (DiffFindOptions fp) val = pokeStruct setter inMarshaller fp val

@@ -30,10 +30,10 @@
         "homepage": "https://libgit2.org/",
         "owner": "libgit2",
         "repo": "libgit2",
-        "rev": "v0.28.3",
-        "sha256": "07068flm9xi25wmcs65nyfg6a7ikgfv96i2nhgyj5gzs9gljqiz2",
+        "rev": "cb17630b75dbdc502c21da8e73641fa932bc8c6b",
+        "sha256": "0i8w5xpv82spd5fi2vs28p5yybsmfwc5djp6yck1ds4b2kapmsnp",
         "type": "tarball",
-        "url": "https://github.com/libgit2/libgit2/archive/v0.28.3.tar.gz",
+        "url": "https://github.com/libgit2/libgit2/archive/cb17630b75dbdc502c21da8e73641fa932bc8c6b.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "0.28.3"
     },
