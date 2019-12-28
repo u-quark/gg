@@ -22,79 +22,33 @@
 
 module GG.UI
   ( main
-  , Commit
   ) where
 
-import           Brick                         (App (..), AttrMap, AttrName,
-                                                BrickEvent (..),
-                                                Direction (Down, Up), EventM,
-                                                Next, Padding (..),
-                                                ViewportType (Vertical), Widget,
-                                                attrMap, bg, cached, continue,
-                                                customMain, emptyWidget, fg,
-                                                getVtyHandle, halt,
-                                                invalidateCacheEntry,
-                                                neverShowCursor, on, padBottom,
-                                                padRight, str, textWidth,
-                                                vScrollBy, vScrollPage,
-                                                vScrollToBeginning,
-                                                vScrollToEnd, viewport,
-                                                viewportScroll, withAttr, (<+>),
-                                                (<=>))
-import qualified Brick.Widgets.List            as L
-import           Control.Lens                  (element, mapMOf, to, (^.), (^?),
-                                                (^?!))
-import           Control.Monad                 (void, when)
-import           Control.Monad.IO.Class        (liftIO)
-import           Data.Bits                     (Bits, zeroBits, (.&.))
-import           Data.Generics.Product.Fields  (field)
-import           Data.List                     (intercalate)
-import           Data.Maybe                    (fromMaybe, isJust, isNothing)
-import           Data.String.Utils             (replace)
-import           Data.Time                     (ZonedTime, defaultTimeLocale,
-                                                formatTime,
-                                                zonedTimeToLocalTime,
-                                                zonedTimeZone)
-import           Data.Vector                   (toList)
-import           GG.Repo                       (Action, readCommit,
-                                                readCommitDiff, readNCommits,
-                                                readRepoState)
-import qualified GG.Repo                       as R
-import           GG.State                      (Commit, Name (..), OpenCommit,
-                                                State (..), addMoreCommits,
-                                                closeCommitDetails, commitL,
-                                                openCommitDetails,
-                                                updateCommitsPos,
-                                                updateRepoState)
-import           Graphics.Vty                  (defAttr)
-import qualified Graphics.Vty                  as V
-import           Graphics.Vty.Output.Interface (Output (resetBackgroundColor, setBackgroundColor))
-import           Libgit2                       (DeltaInfo, DeltaType (..),
-                                                DiffDelta (DiffDelta),
-                                                DiffFile (DiffFile), DiffHunk,
-                                                DiffInfo, DiffLine,
-                                                Filemode (FilemodeBlob, FilemodeBlobExecutable, FilemodeLink),
-                                                HunkInfo, OID,
-                                                Similarity (Similarity),
-                                                diffDeltaNewFile,
-                                                diffDeltaOldFile,
-                                                diffDeltaSimilarity,
-                                                diffDeltaStatus, diffExists,
-                                                diffFileFlags, diffFileMode,
-                                                diffFilePath, diffHunkHeader,
-                                                diffLineContent,
-                                                diffLineNewLineno,
-                                                diffLineOldLineno,
-                                                diffLineOrigin, diffNotBinary,
-                                                diffStatsDeletions,
-                                                diffStatsFilesChanged,
-                                                diffStatsInsertions)
-import           Prelude                       hiding (head)
-import           System.Environment            (lookupEnv, setEnv)
+import           Brick
+import           Brick.Widgets.List
+import           Control.Lens                 (element, mapMOf, to, (^.), (^?),
+                                               (^?!))
+import           Control.Monad                (void, when)
+import           Control.Monad.IO.Class       (liftIO)
+import           Data.Bits                    (Bits, zeroBits, (.&.))
+import           Data.Generics.Product.Fields (field)
+import           Data.List                    (intercalate)
+import           Data.Maybe                   (fromMaybe, isJust, isNothing)
+import           Data.String.Utils            (replace)
+import           Data.Time                    (ZonedTime, defaultTimeLocale,
+                                               formatTime, zonedTimeToLocalTime,
+                                               zonedTimeZone)
+import           Data.Vector                  (toList)
+import qualified GG.Repo                      as R
+import qualified GG.State                     as S
+import qualified Graphics.Vty                 as V
+import qualified Libgit2                      as G
+import           Prelude                      hiding (head)
+import           System.Environment           (lookupEnv, setEnv)
 
 data Event
 
-app :: App State Event Name
+app :: App S.State Event S.Name
 app =
   App
     { appDraw = drawUI
@@ -104,13 +58,13 @@ app =
     , appAttrMap = const theMap
     }
 
-startEvent :: State -> EventM Name State
+startEvent :: S.State -> EventM S.Name S.State
 startEvent s = do
   vty <- getVtyHandle
-  liftIO $ setBackgroundColor (V.outputIface vty) base3
+  liftIO $ V.setBackgroundColor (V.outputIface vty) base3
   return s
 
-handleEvent :: State -> BrickEvent Name Event -> EventM Name (Next State)
+handleEvent :: S.State -> BrickEvent S.Name Event -> EventM S.Name (Next S.State)
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'q') [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEnter [])) = openCommitAction s
@@ -121,24 +75,24 @@ handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doAction R.fixupCommit s
 handleEvent s (VtyEvent ev) = handleScrolling s ev
 handleEvent s _ = continue s
 
-handleScrolling :: State -> V.Event -> EventM Name (Next State)
-handleScrolling s@State {openCommit = Just _, ..} ev = do
+handleScrolling :: S.State -> V.Event -> EventM S.Name (Next S.State)
+handleScrolling s@S.State {openCommit = Just _, ..} ev = do
   handleOpenCommitScrolling ev
   continue s
-handleScrolling s@State {openCommit = Nothing} ev = handleCommitsListScrolling s ev
+handleScrolling s@S.State {openCommit = Nothing} ev = handleCommitsListScrolling s ev
 
-handleCommitsListScrolling :: State -> V.Event -> EventM Name (Next State)
+handleCommitsListScrolling :: S.State -> V.Event -> EventM S.Name (Next S.State)
 handleCommitsListScrolling s (V.EvKey (V.KChar 'G') []) = continue s -- disable going to the end of the list
 handleCommitsListScrolling s (V.EvKey V.KEnd []) = continue s
 handleCommitsListScrolling s ev = do
   s' <- liftIO $ checkNeedsMoreCommits s
-  s'' <- mapMOf (field @"commitList") (L.handleListEventVi L.handleListEvent ev) s'
+  s'' <- mapMOf (field @"commitList") (handleListEventVi handleListEvent ev) s'
   continue s''
 
-handleOpenCommitScrolling :: V.Event -> EventM Name ()
+handleOpenCommitScrolling :: V.Event -> EventM S.Name ()
 handleOpenCommitScrolling e = action vps
   where
-    vps = viewportScroll CommitDiffVP
+    vps = viewportScroll S.CommitDiffVP
     action =
       case e of
         V.EvKey V.KUp []                -> flip vScrollBy (-1)
@@ -155,30 +109,30 @@ handleOpenCommitScrolling e = action vps
         V.EvKey (V.KChar 'b') [V.MCtrl] -> flip vScrollPage Up
         _                               -> const $ pure ()
 
-checkNeedsMoreCommits :: State -> IO State
+checkNeedsMoreCommits :: S.State -> IO S.State
 checkNeedsMoreCommits s =
-  if ((s ^. field @"commitList" . L.listElementsL . to length) -
-      (s ^. field @"commitList" . L.listSelectedL . to (fromMaybe 0))) <
+  if ((s ^. field @"commitList" . listElementsL . to length) -
+      (s ^. field @"commitList" . listSelectedL . to (fromMaybe 0))) <
      500
     then do
-      (moreCommits, contCommit') <- readNCommits 500 (s ^. field @"contCommit")
-      moreCommitsState <- mapM readCommit moreCommits
-      pure $ addMoreCommits moreCommitsState contCommit' s
+      (moreCommits, contCommit') <- R.readNCommits 500 (s ^. field @"contCommit")
+      moreCommitsState <- mapM R.readCommit moreCommits
+      pure $ S.addMoreCommits moreCommitsState contCommit' s
     else pure s
 
-doAction :: Action -> State -> EventM Name (Next State)
+doAction :: R.Action -> S.State -> EventM S.Name (Next S.State)
 doAction a s = do
   s' <-
     liftIO $ do
-      let commitOIDs = map (^. field @"oid") (s ^. field @"commitList" . L.listElementsL . to toList)
-      let pos = s ^. field @"commitList" . L.listSelectedL . to (fromMaybe 0)
+      let commitOIDs = map (^. field @"oid") (s ^. field @"commitList" . listElementsL . to toList)
+      let pos = s ^. field @"commitList" . listSelectedL . to (fromMaybe 0)
       result <- R.doAction (s ^. field @"repository") (s ^. field @"head" . field @"ref") commitOIDs pos a
       case result of
         R.Success newPos -> do
-          (head, headCommit) <- readRepoState $ s ^. field @"repository"
-          (tailCommits, contCommit') <- readNCommits (pos + 500) headCommit
-          moreCommitsState <- mapM readCommit (headCommit : tailCommits)
-          pure $ (updateRepoState contCommit' head moreCommitsState . updateCommitsPos newPos) s
+          (head, headCommit) <- R.readRepoState $ s ^. field @"repository"
+          (tailCommits, contCommit') <- R.readNCommits (pos + 500) headCommit
+          moreCommitsState <- mapM R.readCommit (headCommit : tailCommits)
+          pure $ (S.updateRepoState contCommit' head moreCommitsState . S.updateCommitsPos newPos) s
         _ -> pure s
   continue s'
 
@@ -186,13 +140,13 @@ defaultAttr :: AttrName
 defaultAttr = "default"
 
 oidAttr :: AttrName
-oidAttr = L.listAttr <> "oid"
+oidAttr = listAttr <> "oid"
 
 authorAttr :: AttrName
-authorAttr = L.listAttr <> "author"
+authorAttr = listAttr <> "author"
 
 dateAttr :: AttrName
-dateAttr = L.listAttr <> "date"
+dateAttr = listAttr <> "date"
 
 statusBarAttr :: AttrName
 statusBarAttr = "status_bar"
@@ -263,13 +217,13 @@ diffLineNumberSep = diffAttr <> "line_number_separator"
 myFormatTime :: ZonedTime -> String
 myFormatTime = formatTime defaultTimeLocale "%Y-%m-%d %H:%M"
 
-formatOid :: OID -> String
+formatOid :: G.OID -> String
 formatOid = take 8 . show
 
-fillLine :: AttrName -> Widget Name -> Widget Name
+fillLine :: AttrName -> Widget S.Name -> Widget S.Name
 fillLine attr line = withAttr attr $ padRight Max line
 
-drawCommit :: Bool -> Commit -> Widget Name
+drawCommit :: Bool -> S.Commit -> Widget S.Name
 drawCommit _selected c =
   foldr1
     (<+>)
@@ -285,13 +239,13 @@ drawCommit _selected c =
     , withAttr dateAttr (str $ myFormatTime (c ^. field @"authorWhen"))
     ]
 
-drawUI :: State -> [Widget Name]
+drawUI :: S.State -> [Widget S.Name]
 drawUI s = [ui]
   where
     ui =
       foldr1
         (<=>)
-        [ padBottom Max (L.renderList drawCommit True (s ^. field @"commitList"))
+        [ padBottom Max (renderList drawCommit True (s ^. field @"commitList"))
         , maybe emptyWidget (withAttr defaultAttr . padBottom Max . drawOpenCommit) (s ^. field @"openCommit")
         , withAttr
             statusBarAttr
@@ -299,19 +253,19 @@ drawUI s = [ui]
              padRight Max (str " "))
         ]
 
-openCommitAction :: State -> EventM Name (Next State)
+openCommitAction :: S.State -> EventM S.Name (Next S.State)
 openCommitAction s = do
-  s' <- liftIO $ maybe (pure s) openCommitAction' (s ^. (field @"commitList" . L.listSelectedL))
-  let vps = viewportScroll CommitDiffVP
+  s' <- liftIO $ maybe (pure s) openCommitAction' (s ^. (field @"commitList" . listSelectedL))
+  let vps = viewportScroll S.CommitDiffVP
   vScrollToBeginning vps
-  invalidateCacheEntry CommitDiffUI
+  invalidateCacheEntry S.CommitDiffUI
   continue s'
   where
     openCommitAction' ix = do
-      (diffStats, diffInfo_) <- readCommitDiff (s ^. field @"repository") (s ^?! (commitL ix . field @"oid"))
-      pure $ openCommitDetails ix (diffStats, diffInfo_) s
+      (diffStats, diffInfo_) <- R.readCommitDiff (s ^. field @"repository") (s ^?! (S.commitL ix . field @"oid"))
+      pure $ S.openCommitDetails ix (diffStats, diffInfo_) s
 
-drawSignatures :: Commit -> Widget Name
+drawSignatures :: S.Commit -> Widget S.Name
 drawSignatures c = foldr1 (<=>) cases
   where
     authorName = c ^. field @"authorName"
@@ -357,7 +311,7 @@ drawSignatures c = foldr1 (<=>) cases
           ]
       | otherwise = error "Unreachable code!"
 
-drawDiff :: DiffInfo -> Widget Name
+drawDiff :: G.DiffInfo -> Widget S.Name
 drawDiff diffInfo =
   foldr1 (<=>) $
   map
@@ -378,28 +332,28 @@ data FileMode
 isFlagSet :: (Bits a) => a -> a -> Bool
 isFlagSet value flag = value .&. flag /= zeroBits
 
-drawDelta :: DiffDelta -> Widget Name
-drawDelta DiffDelta { diffDeltaSimilarity = Similarity similarity
-                    , diffDeltaOldFile = old
-                    , diffDeltaNewFile = new
-                    , diffDeltaStatus = deltaType
-                    } =
+drawDelta :: G.DiffDelta -> Widget S.Name
+drawDelta G.DiffDelta { diffDeltaSimilarity = G.Similarity similarity
+                      , diffDeltaOldFile = old
+                      , diffDeltaNewFile = new
+                      , diffDeltaStatus = deltaType
+                      } =
   fillLine fileDelta $ withAttr attr (str text <+> drawTypeTransition <+> drawModeTransition <+> drawSimilarity)
   where
-    fileExists file = diffFileFlags file `isFlagSet` diffExists
+    fileExists file = G.diffFileFlags file `isFlagSet` G.diffExists
     oldExists = fileExists old
     newExists = fileExists new
-    oldName = diffFilePath old
-    newName = diffFilePath new
+    oldName = G.diffFilePath old
+    newName = G.diffFilePath new
     sameName = oldName == newName
-    fileMode DiffFile {diffFileMode = FilemodeBlob} = File
-    fileMode DiffFile {diffFileMode = FilemodeBlobExecutable} = Executable
-    fileMode DiffFile {diffFileMode = FilemodeLink} = Link
-    fileMode DiffFile {diffFileMode = mode} = error $ "Unexpected filemode " ++ show mode
+    fileMode G.DiffFile {diffFileMode = G.FilemodeBlob} = File
+    fileMode G.DiffFile {diffFileMode = G.FilemodeBlobExecutable} = Executable
+    fileMode G.DiffFile {diffFileMode = G.FilemodeLink} = Link
+    fileMode G.DiffFile {diffFileMode = mode} = error $ "Unexpected filemode " ++ show mode
     oldMode = fileMode old
     newMode = fileMode new
     fileType file
-      | diffFileFlags file `isFlagSet` diffNotBinary = Normal
+      | G.diffFileFlags file `isFlagSet` G.diffNotBinary = Normal
     fileType _file = Binary
     oldType = fileType old
     newType = fileType new
@@ -438,15 +392,15 @@ drawDelta DiffDelta { diffDeltaSimilarity = Similarity similarity
       case (oldExists, newExists) of
         (True, True)
           | sameName
-          , deltaType `elem` [DeltaModified, DeltaTypechange]
+          , deltaType `elem` [G.DeltaModified, G.DeltaTypechange]
           , newType == Normal -> (fileModified, intercalate "" [editIcon, newName, sameNameModeIcon])
         (True, True)
           | sameName
-          , deltaType `elem` [DeltaModified, DeltaTypechange] ->
+          , deltaType `elem` [G.DeltaModified, G.DeltaTypechange] ->
             (fileModified, intercalate "" [pencilIcon, typeIcon newType, newName, sameNameModeIcon])
         (True, True)
           | not sameName
-          , deltaType == DeltaCopied ->
+          , deltaType == G.DeltaCopied ->
             ( fileCopied
             , intercalate
                 ""
@@ -463,7 +417,7 @@ drawDelta DiffDelta { diffDeltaSimilarity = Similarity similarity
                 ])
         (True, True)
           | not sameName
-          , deltaType == DeltaRenamed ->
+          , deltaType == G.DeltaRenamed ->
             ( fileRenamed
             , intercalate
                 ""
@@ -478,28 +432,28 @@ drawDelta DiffDelta { diffDeltaSimilarity = Similarity similarity
                 , modeIcon newMode
                 ])
         (False, True)
-          | deltaType == DeltaAdded ->
+          | deltaType == G.DeltaAdded ->
             (fileAdded, intercalate "" [sparklesIcon, typeIcon newType, newName, modeIcon newMode])
         (True, False)
-          | deltaType == DeltaDeleted ->
+          | deltaType == G.DeltaDeleted ->
             (fileDeleted, intercalate "" [crossIcon, typeIcon oldType, oldName, modeIcon oldMode])
         _ -> (fileModified, "Unknown file change?!")
 
-drawDeltaInfo :: DeltaInfo -> Widget Name
+drawDeltaInfo :: G.DeltaInfo -> Widget S.Name
 drawDeltaInfo (hunkInfos, _diffBinaries) =
   foldr ((<=>) . drawHunkInfo (oldLineWidth, newLineWidth)) emptyWidget hunkInfos
   where
     (oldLineWidth, newLineWidth) =
       foldr
         ((\(oldWidth, newWidth) (maxOldWidth, maxNewWidth) -> (max maxOldWidth oldWidth, max maxNewWidth newWidth)) .
-         (\diffLine -> (length $ show $ diffLineOldLineno diffLine, length $ show $ diffLineNewLineno diffLine)))
+         (\diffLine -> (length $ show $ G.diffLineOldLineno diffLine, length $ show $ G.diffLineNewLineno diffLine)))
         (0, 0) $
       concatMap snd hunkInfos
 
-drawHunk :: DiffHunk -> Widget Name
+drawHunk :: G.DiffHunk -> Widget S.Name
 drawHunk hunk = cases
   where
-    header = diffHunkHeader hunk
+    header = G.diffHunkHeader hunk
     strippedHeader = drop k header
       where
         idx = [i | (c, i) <- zip header [0 ..], c == '@']
@@ -508,7 +462,7 @@ drawHunk hunk = cases
       | strippedHeader /= "" = withAttr diffHeader (str $ "  " <> strippedHeader)
       | otherwise = emptyWidget
 
-drawHunkInfo :: (Int, Int) -> HunkInfo -> Widget Name
+drawHunkInfo :: (Int, Int) -> G.HunkInfo -> Widget S.Name
 drawHunkInfo (oldLineWidth, newLineWidth) (hunk, diffLines) =
   hunkHeaderUI <=> foldr1 (<=>) (map (drawLine (oldLineWidth, newLineWidth)) diffLines)
   where
@@ -531,13 +485,13 @@ center width string = replicate left ' ' <> string <> replicate right ' '
         else 0
     right = excess `div` 2
 
-drawLine :: (Int, Int) -> DiffLine -> Widget Name
+drawLine :: (Int, Int) -> G.DiffLine -> Widget S.Name
 drawLine (oldLineWidth, newLineWidth) diffLine = cases
   where
-    origin = diffLineOrigin diffLine
-    oldLineNo = diffLineOldLineno diffLine
-    newLineNo = diffLineNewLineno diffLine
-    content = replace "\t" "    " $ diffLineContent diffLine
+    origin = G.diffLineOrigin diffLine
+    oldLineNo = G.diffLineOldLineno diffLine
+    newLineNo = G.diffLineNewLineno diffLine
+    content = replace "\t" "    " $ G.diffLineContent diffLine
     drawLineNos oldLineNoStr newLineNoStr =
       foldr1
         (<+>)
@@ -558,13 +512,13 @@ drawLine (oldLineWidth, newLineWidth) diffLine = cases
         drawLineNos "" "" <+> drawLine' diffDeletedLine (withAttr diffDeletedText (str carriageReturnIcon))
       | otherwise = error "Unknown line origin"
 
-drawOpenCommit :: OpenCommit -> Widget Name
+drawOpenCommit :: S.OpenCommit -> Widget S.Name
 drawOpenCommit openCommit =
   title <=>
   viewport
-    CommitDiffVP
+    S.CommitDiffVP
     Vertical
-    (cached CommitDiffUI $
+    (cached S.CommitDiffUI $
      foldr1
        (<=>)
        [ fillLine defaultAttr $ str " "
@@ -632,24 +586,24 @@ doubleDividingLine = "\x2551"
 carriageReturnIcon :: String
 carriageReturnIcon = "\x21B5"
 
-drawDiffStats :: OpenCommit -> Widget Name
+drawDiffStats :: S.OpenCommit -> Widget S.Name
 drawDiffStats c =
   foldr1
     (<+>)
     [ str " "
-    , withAttr statsFilesModified $ str $ editIcon ++ show (diffStatsFilesChanged diffStats)
+    , withAttr statsFilesModified $ str $ editIcon ++ show (G.diffStatsFilesChanged diffStats)
     , str " "
-    , withAttr statsInsertions $ str $ plusIcon ++ show (diffStatsInsertions diffStats)
+    , withAttr statsInsertions $ str $ plusIcon ++ show (G.diffStatsInsertions diffStats)
     , str " "
-    , withAttr statsDeletions $ str $ minusIcon ++ show (diffStatsDeletions diffStats)
+    , withAttr statsDeletions $ str $ minusIcon ++ show (G.diffStatsDeletions diffStats)
     ]
   where
     diffStats = c ^. field @"diffStats"
 
-closeAction :: State -> EventM Name (Next State)
+closeAction :: S.State -> EventM S.Name (Next S.State)
 closeAction s =
   if isJust (s ^. field @"openCommit")
-    then continue $ closeCommitDetails s
+    then continue $ S.closeCommitDetails s
     else halt s
 
 rgbColor :: Integer -> Integer -> Integer -> V.Color
@@ -725,8 +679,8 @@ theMap =
   attrMap
     V.defAttr
     [ (defaultAttr, base03 `on` base3)
-    , (L.listAttr, base03 `on` base3)
-    , (L.listSelectedAttr, base03 `on` base3 `V.withStyle` V.bold)
+    , (listAttr, base03 `on` base3)
+    , (listSelectedAttr, base03 `on` base3 `V.withStyle` V.bold)
     , (oidAttr, fg base01)
     , (authorAttr, fg violet)
     , (dateAttr, fg green)
@@ -744,21 +698,21 @@ theMap =
     , (fileRenamed, fg violet)
     , (fileCopied, fg magenta)
     , (diffAttr, base03 `on` base3)
-    , (diffHeader, defAttr `V.withForeColor` base1 `V.withStyle` V.italic)
+    , (diffHeader, V.defAttr `V.withForeColor` base1 `V.withStyle` V.italic)
     , (diffAddedLine, bg greenBg)
     , (diffAddedText, bg greenBgBold)
     , (diffDeletedLine, bg redBg)
     , (diffDeletedText, bg redBgBold)
-    , (diffSpecialText, defAttr `V.withStyle` V.italic)
+    , (diffSpecialText, V.defAttr `V.withStyle` V.italic)
     , (diffLineNumber, base01 `on` base2)
     , (diffLineNumberSep, base1 `on` base2)
     ]
 
-main :: State -> IO ()
+main :: S.State -> IO ()
 main state = do
   terminfoDirs <- lookupEnv "TERMINFO_DIRS"
   when (isNothing terminfoDirs) (setEnv "TERMINFO_DIRS" "/etc/terminfo:/lib/terminfo:/usr/share/terminfo")
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
   void $ customMain initialVty buildVty Nothing app state
-  resetBackgroundColor (V.outputIface initialVty)
+  V.resetBackgroundColor (V.outputIface initialVty)

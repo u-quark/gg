@@ -17,16 +17,15 @@
 -}
 module Main where
 
-import           GG.Repo  (readCommit, readNCommits, readRepoState,
-                           readRepository)
+import qualified GG.Repo  as R
 import qualified GG.State as S
 import qualified GG.UI    as UI
 import           Prelude  hiding (head)
 
 main :: IO ()
 main = do
-  repo <- readRepository
-  (head, headCommit) <- readRepoState repo
-  (tailCommits, contCommit) <- readNCommits 999 headCommit
-  commitsState <- mapM readCommit (headCommit : tailCommits)
+  repo <- R.readRepository
+  (head, headCommit) <- R.readRepoState repo
+  (tailCommits, contCommit) <- R.readNCommits 999 headCommit
+  commitsState <- mapM R.readCommit (headCommit : tailCommits)
   UI.main $ S.initState repo contCommit head commitsState

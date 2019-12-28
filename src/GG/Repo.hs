@@ -33,83 +33,68 @@ module GG.Repo
 import           Control.Exception (try)
 import           Data.Maybe        (fromJust)
 import qualified GG.State          as S
-import           Libgit2           (Commit, DiffInfo, DiffStats,
-                                    Libgit2Exception (..), OID, Reference,
-                                    Repository, Signature, commitAuthor,
-                                    commitBody, commitCommitter, commitId,
-                                    commitLookup, commitParent,
-                                    commitParentCount, commitSummary,
-                                    commitTree, diffDefaultOptions, diffFindAll,
-                                    diffFindDefaultOptions, diffFindSimilar,
-                                    diffGetStats, diffInfo, diffTreeToTree,
-                                    libgit2Init, pokeDiffFindFlags,
-                                    referenceResolve, referenceShorthand,
-                                    referenceTarget, repositoryHead,
-                                    repositoryOpenExt, repositoryOpenNoFlags,
-                                    signatureEmail, signatureName,
-                                    signatureWhen)
 import qualified Libgit2           as G
 
-readCommit :: Commit -> IO S.Commit
+readCommit :: G.Commit -> IO S.Commit
 readCommit commit = do
-  oid <- commitId commit
-  summary <- commitSummary commit
-  body <- commitBody commit
-  author <- commitAuthor commit
-  authorName <- signatureName author
-  authorEmail <- signatureEmail author
-  authorWhen <- signatureWhen author
-  committer <- commitCommitter commit
-  committerName <- signatureName committer
-  committerEmail <- signatureEmail committer
-  committerWhen <- signatureWhen committer
+  oid <- G.commitId commit
+  summary <- G.commitSummary commit
+  body <- G.commitBody commit
+  author <- G.commitAuthor commit
+  authorName <- G.signatureName author
+  authorEmail <- G.signatureEmail author
+  authorWhen <- G.signatureWhen author
+  committer <- G.commitCommitter commit
+  committerName <- G.signatureName committer
+  committerEmail <- G.signatureEmail committer
+  committerWhen <- G.signatureWhen committer
   pure $ S.Commit oid summary body authorName authorEmail authorWhen committerName committerEmail committerWhen False
 
-readCommitDiff :: Repository -> OID -> IO (DiffStats, DiffInfo)
+readCommitDiff :: G.Repository -> G.OID -> IO (G.DiffStats, G.DiffInfo)
 readCommitDiff repo oid = do
-  commit <- commitLookup repo oid
-  tree <- commitTree commit
-  parentCommit <- commitParent commit 0
-  parentTree <- commitTree parentCommit
-  diffOptions <- diffDefaultOptions
-  diff <- diffTreeToTree repo parentTree tree diffOptions
-  diffFindOptions <- diffFindDefaultOptions
-  pokeDiffFindFlags diffFindOptions diffFindAll
-  diffFindSimilar diff diffFindOptions
-  diffStats <- diffGetStats diff
-  diffInfo_ <- diffInfo diff
+  commit <- G.commitLookup repo oid
+  tree <- G.commitTree commit
+  parentCommit <- G.commitParent commit 0
+  parentTree <- G.commitTree parentCommit
+  diffOptions <- G.diffDefaultOptions
+  diff <- G.diffTreeToTree repo parentTree tree diffOptions
+  diffFindOptions <- G.diffFindDefaultOptions
+  G.pokeDiffFindFlags diffFindOptions G.diffFindAll
+  G.diffFindSimilar diff diffFindOptions
+  diffStats <- G.diffGetStats diff
+  diffInfo_ <- G.diffInfo diff
   pure (diffStats, diffInfo_)
 
-readNCommits :: Int -> Commit -> IO ([Commit], Commit)
+readNCommits :: Int -> G.Commit -> IO ([G.Commit], G.Commit)
 readNCommits n leaf = loop 0 leaf []
   where
-    loop :: Int -> Commit -> [Commit] -> IO ([Commit], Commit)
+    loop :: Int -> G.Commit -> [G.Commit] -> IO ([G.Commit], G.Commit)
     loop i c acc =
       if i == n
         then pure (reverse acc, c)
         else do
-          parentCount <- commitParentCount c
+          parentCount <- G.commitParentCount c
           if parentCount == 0
             then pure (reverse acc, c)
             else do
-              commit <- commitParent c 0
+              commit <- G.commitParent c 0
               loop (i + 1) commit (commit : acc)
 
-readRepository :: IO Repository
+readRepository :: IO G.Repository
 readRepository = do
-  _ <- libgit2Init
-  repositoryOpenExt "." repositoryOpenNoFlags ""
+  _ <- G.libgit2Init
+  G.repositoryOpenExt "." G.repositoryOpenNoFlags ""
 
-refToCommit :: Repository -> Reference -> IO Commit
+refToCommit :: G.Repository -> G.Reference -> IO G.Commit
 refToCommit repo ref = do
-  ref' <- referenceResolve ref
-  oid <- fromJust <$> referenceTarget ref'
-  commitLookup repo oid
+  ref' <- G.referenceResolve ref
+  oid <- fromJust <$> G.referenceTarget ref'
+  G.commitLookup repo oid
 
-readRepoState :: Repository -> IO (S.Reference, Commit)
+readRepoState :: G.Repository -> IO (S.Reference, G.Commit)
 readRepoState repo = do
-  headRef <- repositoryHead repo
-  headName <- referenceShorthand headRef
+  headRef <- G.repositoryHead repo
+  headName <- G.referenceShorthand headRef
   commit <- refToCommit repo headRef
   pure (S.Reference headRef headName, commit)
 
@@ -153,7 +138,7 @@ doCommand_ ::
      G.Repository
   -> G.OID
   -> G.OID
-  -> (String -> String -> Signature -> Signature -> IO (String, Signature))
+  -> (String -> String -> G.Signature -> G.Signature -> IO (String, G.Signature))
   -> Bool
   -> IO (Either String G.OID)
 doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
@@ -173,7 +158,7 @@ doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
       applyOptions <- G.applyDefaultOptions
       indexE <- try $ G.applyToTree repo baseTree diff applyOptions
       case indexE of
-        Left (Libgit2Exception _ _) -> pure $ Left $ "Conflicts applying commit \"" <> summary <> "\""
+        Left (G.Libgit2Exception _ _) -> pure $ Left $ "Conflicts applying commit \"" <> summary <> "\""
         Right index -> do
           cherryMessage <- G.commitMessage commit
           cherryAuthor <- G.commitAuthor commit
@@ -192,13 +177,13 @@ doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
             G.commitCreate repo Nothing author committer "UTF-8" message newTree (length newParents) newParents
           pure $ Right newCommitOid
 
-squashCommitInfo :: MessageSquashStrategy -> String -> String -> Signature -> Signature -> IO (String, Signature)
+squashCommitInfo :: MessageSquashStrategy -> String -> String -> G.Signature -> G.Signature -> IO (String, G.Signature)
 squashCommitInfo KeepBase baseMessage _cherryMessage baseAuthor _cherryAuthor = pure (baseMessage, baseAuthor)
 squashCommitInfo MergeAtBottom baseMessage cherryMessage baseAuthor cherryAuthor = do
-  baseAuthorName <- signatureName baseAuthor
-  baseAuthorEmail <- signatureEmail baseAuthor
-  cherryAuthorName <- signatureName cherryAuthor
-  cherryAuthorEmail <- signatureEmail cherryAuthor
+  baseAuthorName <- G.signatureName baseAuthor
+  baseAuthorEmail <- G.signatureEmail baseAuthor
+  cherryAuthorName <- G.signatureName cherryAuthor
+  cherryAuthorEmail <- G.signatureEmail cherryAuthor
   let mergedMessage =
         baseMessage <> "\n" <> cherryMessage <>
         (if not (baseAuthorName == cherryAuthorName && baseAuthorEmail == cherryAuthorEmail)
