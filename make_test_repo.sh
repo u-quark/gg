@@ -24,4 +24,10 @@ git commit -m "B This is an awesome commit" --author="Myself <myself@mail.com>"
 echo a >a
 git add a
 git commit -m "A This is the last commit" --author="Me <me@mail.com>"
+echo b >>b
+git add b
+git commit -m "More of B" --author="Myself <myself@mail.com>"
+echo a >>a
+git add a
+git commit -m "More of A" --author="Me <me@mail.com>"
 )
