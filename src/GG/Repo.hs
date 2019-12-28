@@ -35,11 +35,11 @@ import           Data.Maybe        (fromJust)
 import qualified GG.State          as S
 import           Libgit2           (Commit, DiffInfo, DiffStats,
                                     Libgit2Exception (..), OID, Reference,
-                                    Repository, commitAuthor, commitBody,
-                                    commitCommitter, commitId, commitLookup,
-                                    commitParent, commitParentCount,
-                                    commitSummary, commitTree,
-                                    diffDefaultOptions, diffFindAll,
+                                    Repository, Signature, commitAuthor,
+                                    commitBody, commitCommitter, commitId,
+                                    commitLookup, commitParent,
+                                    commitParentCount, commitSummary,
+                                    commitTree, diffDefaultOptions, diffFindAll,
                                     diffFindDefaultOptions, diffFindSimilar,
                                     diffGetStats, diffInfo, diffTreeToTree,
                                     libgit2Init, pokeDiffFindFlags,
@@ -144,7 +144,20 @@ doAction repo branch commitOIDs pos action = do
         Left _           -> pure res
 
 doCommand :: Command -> G.Repository -> G.OID -> IO (Either String G.OID)
-doCommand (Apply oid) repo baseOid = do
+doCommand (Apply oid) repo baseOid = doCommand_ repo oid baseOid getMessageAndAuthor False
+  where
+    getMessageAndAuthor _baseMessage cherryMessage _baseAuthor cherryAuthor = pure (cherryMessage, cherryAuthor)
+doCommand (Squash oid messageSquashStrategy) repo baseOid =
+  doCommand_ repo oid baseOid (squashCommitInfo messageSquashStrategy) True
+
+doCommand_ ::
+     G.Repository
+  -> G.OID
+  -> G.OID
+  -> (String -> String -> Signature -> Signature -> IO (String, Signature))
+  -> Bool
+  -> IO (Either String G.OID)
+doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
   commit <- G.commitLookup repo oid
   parentCount <- G.commitParentCount commit
   summary <- G.commitSummary commit
@@ -163,13 +176,36 @@ doCommand (Apply oid) repo baseOid = do
       case indexE of
         Left (Libgit2Exception _ _) -> pure $ Left $ "Conflicts applying commit \"" <> summary <> "\""
         Right index -> do
-          message <- G.commitMessage commit
-          author <- G.commitAuthor commit
+          cherryMessage <- G.commitMessage commit
+          cherryAuthor <- G.commitAuthor commit
+          baseMessage <- G.commitMessage baseCommit
+          baseAuthor <- G.commitAuthor baseCommit
+          (message, author) <- getMessageAndAuthor baseMessage cherryMessage baseAuthor cherryAuthor
           committer <- G.signatureDefault repo
           newTreeOid <- G.indexWriteTreeTo index repo
           newTree <- G.treeLookup repo newTreeOid
-          newCommitOid <- G.commitCreate repo Nothing author committer "UTF-8" message newTree 1 [baseCommit]
+          baseCommitParents <- G.commitParents baseCommit
+          let newParents =
+                if isSquash
+                  then baseCommitParents
+                  else [baseCommit]
+          newCommitOid <-
+            G.commitCreate repo Nothing author committer "UTF-8" message newTree (length newParents) newParents
           pure $ Right newCommitOid
+
+squashCommitInfo :: MessageSquashStrategy -> String -> String -> Signature -> Signature -> IO (String, Signature)
+squashCommitInfo KeepBase baseMessage _cherryMessage baseAuthor _cherryAuthor = pure (baseMessage, baseAuthor)
+squashCommitInfo MergeAtBottom baseMessage cherryMessage baseAuthor cherryAuthor = do
+  baseAuthorName <- signatureName baseAuthor
+  baseAuthorEmail <- signatureEmail baseAuthor
+  cherryAuthorName <- signatureName cherryAuthor
+  cherryAuthorEmail <- signatureEmail cherryAuthor
+  let mergedMessage =
+        baseMessage <> "\n" <> cherryMessage <>
+        (if not (baseAuthorName == cherryAuthorName && baseAuthorEmail == cherryAuthorEmail)
+           then "\nCo-Authored-By: " <> cherryAuthorName <> " <" <> cherryAuthorEmail <> ">"
+           else "")
+  pure (mergedMessage, baseAuthor)
 
 data MessageSquashStrategy
   = KeepBase

@@ -115,6 +115,7 @@ handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEnter [])) = openCommitAction s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doAction R.moveCommitUp s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doAction R.moveCommitDown s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'S') [])) = doAction R.squashCommit s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doAction R.fixupCommit s
 handleEvent s (VtyEvent ev) = handleScrolling s ev
 handleEvent s _ = continue s
