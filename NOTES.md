@@ -16,6 +16,18 @@ To compile with debugging enabled:
 
 `stack build --ghc-options "-g -debug"`
 
+and with nix (package.yaml):
+
+```
+library:
+  source-dirs: src
+  ghc-options:
+  - -Wall
+  - -g
+  - -debug
+  - -dcore-lint
+```
+
 To debug the GHC runtime (scheduler, gc, capabilities):
 
 `+RTS -N -Dg -DG -Ds -Di -RTS`
@@ -23,6 +35,14 @@ To debug the GHC runtime (scheduler, gc, capabilities):
 To limit the size of the gc allocation area (make gc run more often):
 
 `+RTS -A51k -RTS`
+
+To get the binary before it is striped from it's debugging information in nix:
+
+ * Make the build fail (gg.nix):
+    postBuild = "false";
+ * Call nix with:
+    > NIX_PATH='' nix-build -K --show-trace
+   and it will keep and print the build directory.
 
 Alternatives
 ============
