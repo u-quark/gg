@@ -29,14 +29,22 @@ import           Control.Lens                 (Traversal', ix, over, set, (&),
 import           Data.Generics.Product.Fields (field)
 import           Data.Time                    (ZonedTime)
 import qualified Data.Vector                  as Vec
+import           GG.Timers                    (Timers)
 import           GHC.Generics                 (Generic)
 import qualified Libgit2                      as G
 import           Prelude                      hiding (head)
+
+data Event =
+  Tick
 
 data Name
   = CommitListUI
   | CommitDiffVP
   | CommitDiffUI
+  deriving (Eq, Ord, Show)
+
+data TimerName =
+  Notification
   deriving (Eq, Ord, Show)
 
 data Commit =
@@ -70,18 +78,25 @@ data OpenCommit =
     }
   deriving (Generic)
 
+data Notification
+  = ApplyConflict String String
+  | ApplyMergeCommit String
+
 data State =
   State
-    { commitList :: L.List Name Commit
-    , head       :: Reference
-    , repository :: G.Repository
-    , contCommit :: G.Commit
-    , openCommit :: Maybe OpenCommit
+    { commitList   :: L.List Name Commit
+    , head         :: Reference
+    , repository   :: G.Repository
+    , contCommit   :: G.Commit
+    , openCommit   :: Maybe OpenCommit
+    , notification :: Maybe (Notification, Double)
+    , timers       :: Timers State Name TimerName
     }
   deriving (Generic)
 
-initState :: G.Repository -> G.Commit -> Reference -> [Commit] -> State
-initState repo commit head_ l = State (L.list CommitListUI (Vec.fromList l) 1) head_ repo commit Nothing
+initState :: G.Repository -> G.Commit -> Reference -> [Commit] -> Timers State Name TimerName -> State
+initState repo commit head_ l timers_ =
+  State (L.list CommitListUI (Vec.fromList l) 1) head_ repo commit Nothing Nothing timers_
 
 updateRepoState :: G.Commit -> Reference -> [Commit] -> State -> State
 updateRepoState commit head_ l =

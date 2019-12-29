@@ -104,7 +104,7 @@ data ActionOutcome
       }
   | InvalidAction
   | ApplyFailed
-      { conflictMessage :: String
+      { conflictNotification :: S.Notification
       }
 
 doAction :: G.Repository -> G.Reference -> [G.OID] -> Int -> Action -> IO ActionOutcome
@@ -127,7 +127,7 @@ doAction repo ref commitOIDs pos action = do
         Right newBaseOid -> loop newBaseOid cs
         Left _           -> pure res
 
-doCommand :: Command -> G.Repository -> G.OID -> IO (Either String G.OID)
+doCommand :: Command -> G.Repository -> G.OID -> IO (Either S.Notification G.OID)
 doCommand (Apply oid) repo baseOid = doCommand_ repo oid baseOid getMessageAndAuthor False
   where
     getMessageAndAuthor _baseMessage cherryMessage _baseAuthor cherryAuthor = pure (cherryMessage, cherryAuthor)
@@ -140,13 +140,13 @@ doCommand_ ::
   -> G.OID
   -> (String -> String -> G.Signature -> G.Signature -> IO (String, G.Signature))
   -> Bool
-  -> IO (Either String G.OID)
+  -> IO (Either S.Notification G.OID)
 doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
   commit <- G.commitLookup repo oid
   parentCount <- G.commitParentCount commit
   summary <- G.commitSummary commit
   if parentCount > 1
-    then pure $ Left $ "Can not apply merge commit \"" <> summary <> "\""
+    then pure $ Left $ S.ApplyMergeCommit summary
     else do
       tree <- G.commitTree commit
       parentCommit <- G.commitParent commit 0
@@ -154,11 +154,12 @@ doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
       diffOptions <- G.diffDefaultOptions
       diff <- G.diffTreeToTree repo parentTree tree diffOptions
       baseCommit <- G.commitLookup repo baseOid
+      baseSummary <- G.commitSummary baseCommit
       baseTree <- G.commitTree baseCommit
       applyOptions <- G.applyDefaultOptions
       indexE <- try $ G.applyToTree repo baseTree diff applyOptions
       case indexE of
-        Left (G.Libgit2Exception _ _) -> pure $ Left $ "Conflicts applying commit \"" <> summary <> "\""
+        Left (G.Libgit2Exception _ _) -> pure $ Left $ S.ApplyConflict summary baseSummary
         Right index -> do
           cherryMessage <- G.commitMessage commit
           cherryAuthor <- G.commitAuthor commit

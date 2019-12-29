@@ -16,6 +16,7 @@
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TypeApplications  #-}
@@ -25,30 +26,31 @@ module GG.UI
   ) where
 
 import           Brick
+import           Brick.BChan            (BChan)
 import           Brick.Widgets.List
-import           Control.Lens                 (element, mapMOf, to, (^.), (^?),
-                                               (^?!))
-import           Control.Monad                (void, when)
-import           Control.Monad.IO.Class       (liftIO)
-import           Data.Bits                    (Bits, zeroBits, (.&.))
-import           Data.Generics.Product.Fields (field)
-import           Data.List                    (intercalate)
-import           Data.Maybe                   (fromMaybe, isJust, isNothing)
-import           Data.String.Utils            (replace)
-import           Data.Time                    (ZonedTime, defaultTimeLocale,
-                                               formatTime, zonedTimeToLocalTime,
-                                               zonedTimeZone)
-import           Data.Vector                  (toList)
-import qualified GG.Repo                      as R
-import qualified GG.State                     as S
-import qualified Graphics.Vty                 as V
-import qualified Libgit2                      as G
-import           Prelude                      hiding (head)
-import           System.Environment           (lookupEnv, setEnv)
+import           Control.Lens           (element, mapMOf, mapped, set, to, (^.),
+                                         (^?), (^?!), _2)
+import           Control.Monad          (void, when)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.Bits              (Bits, zeroBits, (.&.))
+import           Data.Generics.Product  (field)
+import           Data.List              (intercalate)
+import           Data.Maybe             (fromJust, fromMaybe, isJust, isNothing)
+import           Data.String.Utils      (replace)
+import           Data.Time              (ZonedTime, defaultTimeLocale,
+                                         formatTime, zonedTimeToLocalTime,
+                                         zonedTimeZone)
+import           Data.Vector            (toList)
+import qualified GG.Repo                as R
+import qualified GG.State               as S
+import           GG.Timers              (AnimationCb, AnimationEndCb,
+                                         addAnimation, tickEventHandler)
+import qualified Graphics.Vty           as V
+import qualified Libgit2                as G
+import           Prelude                hiding (head)
+import           System.Environment     (lookupEnv, setEnv)
 
-data Event
-
-app :: App S.State Event S.Name
+app :: App S.State S.Event S.Name
 app =
   App
     { appDraw = drawUI
@@ -64,7 +66,7 @@ startEvent s = do
   liftIO $ V.setBackgroundColor (V.outputIface vty) base3
   return s
 
-handleEvent :: S.State -> BrickEvent S.Name Event -> EventM S.Name (Next S.State)
+handleEvent :: S.State -> BrickEvent S.Name S.Event -> EventM S.Name (Next S.State)
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'q') [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEnter [])) = openCommitAction s
@@ -73,6 +75,7 @@ handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doAction R.moveCommitDown 
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'S') [])) = doAction R.squashCommit s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doAction R.fixupCommit s
 handleEvent s (VtyEvent ev) = handleScrolling s ev
+handleEvent s (AppEvent S.Tick) = tickEventHandler (s ^. field @"timers") s
 handleEvent s _ = continue s
 
 handleScrolling :: S.State -> V.Event -> EventM S.Name (Next S.State)
@@ -133,8 +136,22 @@ doAction a s = do
           (tailCommits, contCommit') <- R.readNCommits (pos + 500) headCommit
           moreCommitsState <- mapM R.readCommit (headCommit : tailCommits)
           pure $ (S.updateRepoState contCommit' head moreCommitsState . S.updateCommitsPos newPos) s
-        _ -> pure s
+        R.ApplyFailed notification -> do
+          let s' = set (field @"notification") (Just (notification, 1)) s
+          addAnimation (s ^. field @"timers") S.Notification 5 notificationAnimation notificationAnimationEnd
+          pure s'
+        R.InvalidAction -> pure s
   continue s'
+
+notificationAnimation :: AnimationCb S.State S.Name
+notificationAnimation t s = do
+  let s' = set (field @"notification" . mapped . _2) (easeOut t) s
+  pure (s', [])
+
+notificationAnimationEnd :: AnimationEndCb S.State S.Name
+notificationAnimationEnd s = do
+  let s' = set (field @"notification") Nothing s
+  pure (s', [])
 
 defaultAttr :: AttrName
 defaultAttr = "default"
@@ -153,6 +170,12 @@ statusBarAttr = "status_bar"
 
 statusBranchAttr :: AttrName
 statusBranchAttr = statusBarAttr <> "status_branch"
+
+notificationAttr :: AttrName
+notificationAttr = "notification"
+
+notificationCommitAttr :: AttrName
+notificationCommitAttr = notificationAttr <> "commit"
 
 commitSummary :: AttrName
 commitSummary = "commit_summary"
@@ -247,11 +270,34 @@ drawUI s = [ui]
         (<=>)
         [ padBottom Max (renderList drawCommit True (s ^. field @"commitList"))
         , maybe emptyWidget (withAttr defaultAttr . padBottom Max . drawOpenCommit) (s ^. field @"openCommit")
-        , withAttr
-            statusBarAttr
-            (withAttr statusBranchAttr (str ("On " <> s ^. field @"head" . field @"shorthand")) <+>
-             padRight Max (str " "))
+        , drawStatusBar s
         ]
+
+drawStatusBar :: S.State -> Widget S.Name
+drawStatusBar s =
+  withAttr
+    statusBarAttr
+    (withAttr statusBranchAttr (str ("On " <> s ^. field @"head" . field @"shorthand")) <+> padRight Max (str " ")) <+>
+  drawNotification (s ^. field @"notification")
+
+drawNotification :: Maybe (S.Notification, Double) -> Widget S.Name
+drawNotification =
+  \case
+    Nothing -> emptyWidget
+    Just (notification, opacity) ->
+      case notification of
+        S.ApplyConflict commit baseCommit ->
+          withAnimAttr notificationAttr opacity $ str boomIconMaybe <+> str "Conflicts applying commit " <+>
+          withAnimAttr notificationCommitAttr opacity (str commit) <+>
+          str " on top of commit " <+>
+          withAnimAttr notificationCommitAttr opacity (str baseCommit)
+        S.ApplyMergeCommit commit ->
+          withAnimAttr notificationAttr opacity $ str boomIconMaybe <+> str "Can not apply merge commit " <+>
+          withAnimAttr notificationCommitAttr opacity (str commit)
+      where boomIconMaybe =
+              if opacity > 0.6
+                then boomIcon
+                else ""
 
 openCommitAction :: S.State -> EventM S.Name (Next S.State)
 openCommitAction s = do
@@ -586,6 +632,9 @@ doubleDividingLine = "\x2551"
 carriageReturnIcon :: String
 carriageReturnIcon = "\x21B5"
 
+boomIcon :: String
+boomIcon = "\x1F4A5"
+
 drawDiffStats :: S.OpenCommit -> Widget S.Name
 drawDiffStats c =
   foldr1
@@ -708,11 +757,50 @@ theMap =
     , (diffLineNumberSep, base1 `on` base2)
     ]
 
-main :: S.State -> IO ()
-main state = do
+withAnimAttr :: AttrName -> Double -> Widget S.Name -> Widget S.Name
+withAnimAttr attr
+  | attr == notificationAttr = withBlendFgColor (base03 `on` base2) base03 base2
+withAnimAttr attr
+  | attr == notificationCommitAttr = withBlendFgColor (base03 `on` base2 `V.withStyle` V.bold) base03 base2
+withAnimAttr attr = \_a -> withAttr attr
+
+withBlendFgColor :: V.Attr -> V.Color -> V.Color -> Double -> Widget S.Name -> Widget S.Name
+withBlendFgColor attr c1 c2 a = modifyDefAttr $ const attr {V.attrForeColor = V.SetTo $ blendColor c1 c2 a}
+
+uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
+uncurry3 f (a, b, c) = f a b c
+
+blendColor :: V.Color -> V.Color -> Double -> V.Color
+blendColor (V.Color240 c1) (V.Color240 c2) a =
+  V.Color240 $ uncurry3 V.rgbColorToColor240 $
+  blendRGB (fromJust $ V.color240CodeToRGB c1) (fromJust $ V.color240CodeToRGB c2) a
+blendColor (V.RGBColor r1 g1 b1) (V.RGBColor r2 g2 b2) a = uncurry3 V.RGBColor $ blendRGB (r1, g1, b1) (r2, g2, b2) a
+blendColor _ _ _ = error "Can only blend color Color240 or RGBColor"
+
+gamma :: Double
+gamma = 1
+
+blendRGB :: Integral i => (i, i, i) -> (i, i, i) -> Double -> (i, i, i)
+blendRGB (r1, g1, b1) (r2, g2, b2) a = (blendChannel r1 r2, blendChannel g1 g2, blendChannel b1 b2)
+  where
+    blendGammaCorrected c1 c2 = c1 * a + c2 * (1 - a)
+    blendNormalised c1 c2 = blendGammaCorrected (c1 ** gamma) (c2 ** gamma) ** (1 / gamma)
+    blendChannel c1 c2 = round $ 255 * blendNormalised (fromIntegral c1 / 255) (fromIntegral c2 / 255)
+
+easeOut :: Double -> Double
+easeOut t =
+  if t < sustain
+    then 1
+    else 1 - ((t - sustain) / (1 - sustain)) ** easeExp
+  where
+    sustain = 0.8
+    easeExp = 0.7
+
+main :: BChan S.Event -> S.State -> IO ()
+main bChan state = do
   terminfoDirs <- lookupEnv "TERMINFO_DIRS"
   when (isNothing terminfoDirs) (setEnv "TERMINFO_DIRS" "/etc/terminfo:/lib/terminfo:/usr/share/terminfo")
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
-  void $ customMain initialVty buildVty Nothing app state
+  void $ customMain initialVty buildVty (Just bChan) app state
   V.resetBackgroundColor (V.outputIface initialVty)

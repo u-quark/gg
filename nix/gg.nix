@@ -6,6 +6,7 @@
   c2hs,
   # Haskell deps
   base,
+  containers,
   time,
   brick,
   vty,
@@ -39,6 +40,7 @@ mkDerivation {
   executableHaskellDepends = [
     # Haskell deps
     base
+    containers
     time
     brick
     vty

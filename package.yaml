@@ -22,6 +22,7 @@ description:         Please see the README on GitHub at <https://github.com/u-qu
 
 dependencies:
 - base >= 4.7 && < 5
+- containers
 - time
 - brick
 - vty
@@ -50,6 +51,7 @@ library:
     - GG.State
     - GG.UI
     - GG.Repo
+    - GG.Timers
     - Libgit2.Types   # XXX order matters here: we need Libgit2/Types.chi to be produced first
     - Libgit2.OID
     - Libgit2
