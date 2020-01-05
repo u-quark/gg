@@ -30,10 +30,9 @@ module GG.Repo
   , fixupCommit
   ) where
 
-import           Control.Exception (try)
-import           Data.Maybe        (fromJust)
-import qualified GG.State          as S
-import qualified Libgit2           as G
+import           Data.Maybe (fromJust)
+import qualified GG.State   as S
+import qualified Libgit2    as G
 
 readCommit :: G.Commit -> IO S.Commit
 readCommit commit = do
@@ -151,16 +150,15 @@ doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
       tree <- G.commitTree commit
       parentCommit <- G.commitParent commit 0
       parentTree <- G.commitTree parentCommit
-      diffOptions <- G.diffDefaultOptions
-      diff <- G.diffTreeToTree repo parentTree tree diffOptions
       baseCommit <- G.commitLookup repo baseOid
       baseSummary <- G.commitSummary baseCommit
       baseTree <- G.commitTree baseCommit
-      applyOptions <- G.applyDefaultOptions
-      indexE <- try $ G.applyToTree repo baseTree diff applyOptions
-      case indexE of
-        Left (G.Libgit2Exception _ _) -> pure $ Left $ S.ApplyConflict summary baseSummary
-        Right index -> do
+      mergeOptions <- G.mergeDefaultOptions
+      index <- G.mergeTrees repo parentTree baseTree tree mergeOptions
+      hasConflicts <- G.indexHasConflicts index
+      if hasConflicts
+        then pure $ Left $ S.ApplyConflict summary baseSummary
+        else do
           cherryMessage <- G.commitMessage commit
           cherryAuthor <- G.commitAuthor commit
           baseMessage <- G.commitMessage baseCommit
