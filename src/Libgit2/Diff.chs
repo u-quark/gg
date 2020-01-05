@@ -54,12 +54,12 @@ module Libgit2.Diff
   , diffFindOptionsVersion
   , diffFindOptionsInit
   , diffFindDefaultOptions
-  , pokeDiffFindFlags
-  , pokeDiffFindRenameThreshold
-  , pokeDiffFindRenameFromRewriteThreshold
-  , pokeDiffFindCopyThreshold
-  , pokeDiffFindBreakRewriteThreshold
-  , pokeDiffFindRenameLimit
+  , pokeDiffFindOptionsFlags
+  , pokeDiffFindOptionsRenameThreshold
+  , pokeDiffFindOptionsRenameFromRewriteThreshold
+  , pokeDiffFindOptionsCopyThreshold
+  , pokeDiffFindOptionsBreakRewriteThreshold
+  , pokeDiffFindOptionsRenameLimit
   , diffTreeToTree
   , diffNumDeltas
   , diffGetStats
@@ -310,22 +310,22 @@ diffFindDefaultOptions = diffFindOptionsInit diffFindOptionsVersion
 _pokeDiffFindOptions :: (Ptr DiffFindOptions -> b -> IO ()) -> (a -> IO b) -> DiffFindOptions -> a -> IO ()
 _pokeDiffFindOptions setter inMarshaller (DiffFindOptions fp) val = pokeStruct setter inMarshaller fp val
 
-pokeDiffFindFlags :: DiffFindOptions -> DiffFindFlag -> IO ()
-pokeDiffFindFlags = _pokeDiffFindOptions ({#set diff_find_options->flags#}) (pure . fromDiffFindFlags)
+pokeDiffFindOptionsFlags :: DiffFindOptions -> DiffFindFlags -> IO ()
+pokeDiffFindOptionsFlags = _pokeDiffFindOptions ({#set diff_find_options->flags#}) (pure . fromDiffFindFlags)
 
-pokeDiffFindRenameThreshold :: DiffFindOptions -> Int -> IO ()
-pokeDiffFindRenameThreshold = _pokeDiffFindOptions ({#set diff_find_options->rename_threshold#}) (pure . fromIntegral)
+pokeDiffFindOptionsRenameThreshold :: DiffFindOptions -> Int -> IO ()
+pokeDiffFindOptionsRenameThreshold = _pokeDiffFindOptions ({#set diff_find_options->rename_threshold#}) (pure . fromIntegral)
 
-pokeDiffFindRenameFromRewriteThreshold :: DiffFindOptions -> Int -> IO ()
-pokeDiffFindRenameFromRewriteThreshold = _pokeDiffFindOptions ({#set diff_find_options->rename_from_rewrite_threshold#}) (pure . fromIntegral)
+pokeDiffFindOptionsRenameFromRewriteThreshold :: DiffFindOptions -> Int -> IO ()
+pokeDiffFindOptionsRenameFromRewriteThreshold = _pokeDiffFindOptions ({#set diff_find_options->rename_from_rewrite_threshold#}) (pure . fromIntegral)
 
-pokeDiffFindCopyThreshold :: DiffFindOptions -> Int -> IO ()
-pokeDiffFindCopyThreshold = _pokeDiffFindOptions ({#set diff_find_options->copy_threshold#}) (pure . fromIntegral)
+pokeDiffFindOptionsCopyThreshold :: DiffFindOptions -> Int -> IO ()
+pokeDiffFindOptionsCopyThreshold = _pokeDiffFindOptions ({#set diff_find_options->copy_threshold#}) (pure . fromIntegral)
 
-pokeDiffFindBreakRewriteThreshold :: DiffFindOptions -> Int -> IO ()
-pokeDiffFindBreakRewriteThreshold = _pokeDiffFindOptions ({#set diff_find_options->break_rewrite_threshold#}) (pure . fromIntegral)
+pokeDiffFindOptionsBreakRewriteThreshold :: DiffFindOptions -> Int -> IO ()
+pokeDiffFindOptionsBreakRewriteThreshold = _pokeDiffFindOptions ({#set diff_find_options->break_rewrite_threshold#}) (pure . fromIntegral)
 
-pokeDiffFindRenameLimit :: DiffFindOptions -> Int -> IO ()
-pokeDiffFindRenameLimit = _pokeDiffFindOptions ({#set diff_find_options->rename_limit#}) (pure . fromIntegral)
+pokeDiffFindOptionsRenameLimit :: DiffFindOptions -> Int -> IO ()
+pokeDiffFindOptionsRenameLimit = _pokeDiffFindOptions ({#set diff_find_options->rename_limit#}) (pure . fromIntegral)
 
 {#fun diff_find_similar as diffFindSimilar { `Diff', `DiffFindOptions' } -> `Int' checkReturnCode*-#}

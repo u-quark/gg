@@ -32,6 +32,7 @@ module Libgit2.Utils
   , IterResult(..)
   , peekStruct
   , pokeStruct
+  , pokeStructWith
   , malloca
   , withFunPtr
   , withFunPtrM
@@ -107,6 +108,9 @@ pokeStruct setter inMarshaller fp val =
     (\p -> do
        cVal <- inMarshaller val
        setter p cVal)
+
+pokeStructWith :: (Ptr s -> b -> IO ()) -> (a -> (b -> IO ()) -> IO ()) -> ForeignPtr s -> a -> IO ()
+pokeStructWith setter withMarshaller fp val = withForeignPtr fp (withMarshaller val . setter)
 
 data IterResult
   = IterHasMore

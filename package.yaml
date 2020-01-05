@@ -69,6 +69,7 @@ library:
     - Libgit2.Apply
     - Libgit2.Index
     - Libgit2.Tree
+    - Libgit2.Merge
 
 executables:
   gg:

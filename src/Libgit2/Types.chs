@@ -114,7 +114,7 @@ module Libgit2.Types
   , DiffOptions(..)
   , withDiffOptions
   , peekDiffOptions
-  , DiffFindFlag(..)
+  , DiffFindFlags(..)
   , fromDiffFindFlags
   , diffFindByConfig
   , diffFindRenames
@@ -148,12 +148,35 @@ module Libgit2.Types
   , ApplyOptions(..)
   , withApplyOptions
   , peekApplyOptions
+  , MergeFlags(..)
+  , fromMergeFlags
+  , mergeFindRenames
+  , mergeFailOnConflict
+  , mergeSkipReuc
+  , mergeNoRecursive
+  , MergeDriver(..)
+  , withMergeDriver
+  , MergeFileFlags(..)
+  , fromMergeFileFlags
+  , mergeFileDefault
+  , mergeFileStyleMerge
+  , mergeFileStyleDiff3
+  , mergeFileSimplifyAlnum
+  , mergeFileIgnoreWhitespace
+  , mergeFileIgnoreWhitespaceChange
+  , mergeFileIgnoreWhitespaceEol
+  , mergeFileDiffPatience
+  , mergeFileDiffMinimal
+  , MergeFileFavour
+  , MergeOptions(..)
+  , withMergeOptions
+  , peekMergeOptions
 )
 
 where
 
 import Foreign (Ptr, nullPtr, Storable, peek, newForeignPtr, newForeignPtr_, peekByteOff, finalizerFree)
-import Foreign.C (peekCString, peekCStringLen, CUInt, CLong, castCCharToChar)
+import Foreign.C (peekCString, peekCStringLen, CUInt, CLong, castCCharToChar, CString, withCString)
 import Data.Bits (Bits)
 import Data.Time.LocalTime (ZonedTime, minutesToTimeZone, utcToZonedTime)
 import Data.Time.Clock.POSIX (POSIXTime, posixSecondsToUTCTime)
@@ -172,6 +195,8 @@ import Libgit2.Utils (peekNew)
 #include <git2/signature.h>
 #include <git2/index.h>
 #include <git2/apply.h>
+#include <git2/merge.h>
+#include <git2/sys/merge.h>
 
 {#context lib="git2" prefix="git_"#}
 
@@ -482,45 +507,45 @@ peekDiffOptions p = DiffOptions <$> (newForeignPtr finalizerFree p)
 
 {#enum diff_find_t as InternalDiffFindFlags {underscoreToCase, upcaseFirstLetter} with prefix = "GIT_DIFF_" add prefix = "internal_diff_" deriving (Eq, Show)#}
 
-newtype DiffFindFlag = DiffFindFlag CUInt deriving (Eq, Show, Bits)
+newtype DiffFindFlags = DiffFindFlags CUInt deriving (Eq, Show, Bits)
 
-fromDiffFindFlags :: DiffFindFlag -> CUInt
-fromDiffFindFlags (DiffFindFlag options) = options
+fromDiffFindFlags :: DiffFindFlags -> CUInt
+fromDiffFindFlags (DiffFindFlags options) = options
 
-fromDiffFindFlagsEnum :: InternalDiffFindFlags -> DiffFindFlag
-fromDiffFindFlagsEnum = DiffFindFlag . fromIntegral . fromEnum
+fromDiffFindFlagsEnum :: InternalDiffFindFlags -> DiffFindFlags
+fromDiffFindFlagsEnum = DiffFindFlags . fromIntegral . fromEnum
 
-diffFindByConfig :: DiffFindFlag
+diffFindByConfig :: DiffFindFlags
 diffFindByConfig = fromDiffFindFlagsEnum InternalDiffFindByConfig
-diffFindRenames :: DiffFindFlag
+diffFindRenames :: DiffFindFlags
 diffFindRenames = fromDiffFindFlagsEnum InternalDiffFindRenames
-diffFindRenamesFromRewrites :: DiffFindFlag
+diffFindRenamesFromRewrites :: DiffFindFlags
 diffFindRenamesFromRewrites = fromDiffFindFlagsEnum InternalDiffFindRenamesFromRewrites
-diffFindCopies :: DiffFindFlag
+diffFindCopies :: DiffFindFlags
 diffFindCopies = fromDiffFindFlagsEnum InternalDiffFindCopies
-diffFindCopiesFromUnmodified :: DiffFindFlag
+diffFindCopiesFromUnmodified :: DiffFindFlags
 diffFindCopiesFromUnmodified = fromDiffFindFlagsEnum InternalDiffFindCopiesFromUnmodified
-diffFindRewrites :: DiffFindFlag
+diffFindRewrites :: DiffFindFlags
 diffFindRewrites = fromDiffFindFlagsEnum InternalDiffFindRewrites
-diffBreakRewrites :: DiffFindFlag
+diffBreakRewrites :: DiffFindFlags
 diffBreakRewrites = fromDiffFindFlagsEnum InternalDiffBreakRewrites
-diffFindAndBreakRewrites :: DiffFindFlag
+diffFindAndBreakRewrites :: DiffFindFlags
 diffFindAndBreakRewrites = fromDiffFindFlagsEnum InternalDiffFindAndBreakRewrites
-diffFindForUntracked :: DiffFindFlag
+diffFindForUntracked :: DiffFindFlags
 diffFindForUntracked = fromDiffFindFlagsEnum InternalDiffFindForUntracked
-diffFindAll :: DiffFindFlag
+diffFindAll :: DiffFindFlags
 diffFindAll = fromDiffFindFlagsEnum InternalDiffFindAll
-diffFindIgnoreLeadingWhitespace :: DiffFindFlag
+diffFindIgnoreLeadingWhitespace :: DiffFindFlags
 diffFindIgnoreLeadingWhitespace = fromDiffFindFlagsEnum InternalDiffFindIgnoreLeadingWhitespace
-diffFindIgnoreWhitespace :: DiffFindFlag
+diffFindIgnoreWhitespace :: DiffFindFlags
 diffFindIgnoreWhitespace = fromDiffFindFlagsEnum InternalDiffFindIgnoreWhitespace
-diffFindDontIgnoreWhitespace :: DiffFindFlag
+diffFindDontIgnoreWhitespace :: DiffFindFlags
 diffFindDontIgnoreWhitespace = fromDiffFindFlagsEnum InternalDiffFindDontIgnoreWhitespace
-diffFindExactMatchOnly :: DiffFindFlag
+diffFindExactMatchOnly :: DiffFindFlags
 diffFindExactMatchOnly = fromDiffFindFlagsEnum InternalDiffFindExactMatchOnly
-diffBreakRewritesForRenamesOnly :: DiffFindFlag
+diffBreakRewritesForRenamesOnly :: DiffFindFlags
 diffBreakRewritesForRenamesOnly = fromDiffFindFlagsEnum InternalDiffBreakRewritesForRenamesOnly
-diffFindRemoveUnmodified :: DiffFindFlag
+diffFindRemoveUnmodified :: DiffFindFlags
 diffFindRemoveUnmodified = fromDiffFindFlagsEnum InternalDiffFindRemoveUnmodified
 
 {#pointer *diff_find_options as DiffFindOptions foreign newtype#}
@@ -558,3 +583,79 @@ instance Storable ApplyOptions where
 
 peekApplyOptions :: Ptr ApplyOptions -> IO ApplyOptions
 peekApplyOptions p = ApplyOptions <$> (newForeignPtr finalizerFree p)
+
+{#enum merge_flag_t as InternalMergeFlags {underscoreToCase, upcaseFirstLetter} with prefix = "GIT_MERGE_" add prefix = "internal_merge" deriving (Eq, Show)#}
+
+newtype MergeFlags = MergeFlags CUInt deriving (Eq, Show, Bits)
+
+fromMergeFlags :: MergeFlags -> CUInt
+fromMergeFlags (MergeFlags flags) = flags
+
+fromMergeFlagsEnum :: InternalMergeFlags -> MergeFlags
+fromMergeFlagsEnum = MergeFlags . fromIntegral . fromEnum
+
+mergeFindRenames :: MergeFlags
+mergeFindRenames = fromMergeFlagsEnum InternalMergeFindRenames
+mergeFailOnConflict :: MergeFlags
+mergeFailOnConflict = fromMergeFlagsEnum InternalMergeFailOnConflict
+mergeSkipReuc :: MergeFlags
+mergeSkipReuc = fromMergeFlagsEnum InternalMergeSkipReuc
+mergeNoRecursive :: MergeFlags
+mergeNoRecursive = fromMergeFlagsEnum InternalMergeNoRecursive
+
+data MergeDriver = DriverText | DriverBinary | DriverUnion
+
+withMergeDriver :: MergeDriver -> (CString -> IO a) -> IO a
+withMergeDriver DriverText = withCString {#const GIT_MERGE_DRIVER_TEXT#}
+withMergeDriver DriverBinary = withCString {#const GIT_MERGE_DRIVER_BINARY#}
+withMergeDriver DriverUnion = withCString {#const GIT_MERGE_DRIVER_UNION#}
+
+{#enum merge_file_flag_t as InternalMergeFileFlags {underscoreToCase, upcaseFirstLetter} with prefix = "GIT_MERGE_FILE" add prefix = "internal_merge_file" deriving (Eq, Show)#}
+
+newtype MergeFileFlags = MergeFileFlags CUInt deriving (Eq, Show, Bits)
+
+fromMergeFileFlags :: MergeFileFlags -> CUInt
+fromMergeFileFlags (MergeFileFlags flags) = flags
+
+fromMergeFileFlagsEnum :: InternalMergeFileFlags -> MergeFileFlags
+fromMergeFileFlagsEnum = MergeFileFlags . fromIntegral . fromEnum
+
+mergeFileDefault :: MergeFileFlags
+mergeFileDefault = fromMergeFileFlagsEnum InternalMergeFileDefault
+
+mergeFileStyleMerge :: MergeFileFlags
+mergeFileStyleMerge = fromMergeFileFlagsEnum InternalMergeFileStyleMerge
+
+mergeFileStyleDiff3 :: MergeFileFlags
+mergeFileStyleDiff3 = fromMergeFileFlagsEnum InternalMergeFileStyleDiff3
+
+mergeFileSimplifyAlnum :: MergeFileFlags
+mergeFileSimplifyAlnum = fromMergeFileFlagsEnum InternalMergeFileSimplifyAlnum
+
+mergeFileIgnoreWhitespace :: MergeFileFlags
+mergeFileIgnoreWhitespace = fromMergeFileFlagsEnum InternalMergeFileIgnoreWhitespace
+
+mergeFileIgnoreWhitespaceChange :: MergeFileFlags
+mergeFileIgnoreWhitespaceChange = fromMergeFileFlagsEnum InternalMergeFileIgnoreWhitespaceChange
+
+mergeFileIgnoreWhitespaceEol :: MergeFileFlags
+mergeFileIgnoreWhitespaceEol = fromMergeFileFlagsEnum InternalMergeFileIgnoreWhitespaceEol
+
+mergeFileDiffPatience :: MergeFileFlags
+mergeFileDiffPatience = fromMergeFileFlagsEnum InternalMergeFileDiffPatience
+
+mergeFileDiffMinimal :: MergeFileFlags
+mergeFileDiffMinimal = fromMergeFileFlagsEnum InternalMergeFileDiffMinimal
+
+{#enum merge_file_favor_t as MergeFileFavour {underscoreToCase, upcaseFirstLetter} deriving (Eq, Show)#}
+
+{#pointer *merge_options as MergeOptions foreign newtype#}
+
+instance Storable MergeOptions where
+  sizeOf _ = {#sizeof merge_options#}
+  alignment _ = {#alignof merge_options#}
+  peek = error "Can't peek MergeOptions"
+  poke = error "Can't poke MergeOptions"
+
+peekMergeOptions :: Ptr MergeOptions -> IO MergeOptions
+peekMergeOptions p = MergeOptions <$> (newForeignPtr finalizerFree p)

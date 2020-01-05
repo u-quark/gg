@@ -59,7 +59,7 @@ readCommitDiff repo oid = do
   diffOptions <- G.diffDefaultOptions
   diff <- G.diffTreeToTree repo parentTree tree diffOptions
   diffFindOptions <- G.diffFindDefaultOptions
-  G.pokeDiffFindFlags diffFindOptions G.diffFindAll
+  G.pokeDiffFindOptionsFlags diffFindOptions G.diffFindAll
   G.diffFindSimilar diff diffFindOptions
   diffStats <- G.diffGetStats diff
   diffInfo_ <- G.diffInfo diff
