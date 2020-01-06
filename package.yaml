@@ -70,6 +70,7 @@ library:
     - Libgit2.Index
     - Libgit2.Tree
     - Libgit2.Merge
+    - Libgit2.Reflog
 
 executables:
   gg:

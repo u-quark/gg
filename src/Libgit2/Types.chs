@@ -171,6 +171,12 @@ module Libgit2.Types
   , MergeOptions(..)
   , withMergeOptions
   , peekMergeOptions
+  , Reflog(..)
+  , peekNewReflog
+  , reflogFree
+  , withReflog
+  , ReflogEntry(..)
+  , withReflogEntry
 )
 
 where
@@ -197,6 +203,7 @@ import Libgit2.Utils (peekNew)
 #include <git2/apply.h>
 #include <git2/merge.h>
 #include <git2/sys/merge.h>
+#include <git2/reflog.h>
 
 {#context lib="git2" prefix="git_"#}
 
@@ -659,3 +666,10 @@ instance Storable MergeOptions where
 
 peekMergeOptions :: Ptr MergeOptions -> IO MergeOptions
 peekMergeOptions p = MergeOptions <$> (newForeignPtr finalizerFree p)
+
+{#pointer *reflog as Reflog foreign finalizer reflog_free as reflogFree newtype#}
+
+peekNewReflog :: Ptr (Ptr Reflog) -> IO Reflog
+peekNewReflog = peekNew Reflog reflogFree
+
+{#pointer *reflog_entry as ReflogEntry foreign newtype#}

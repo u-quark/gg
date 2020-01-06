@@ -25,6 +25,7 @@ module Libgit2
   , module Libgit2.Index
   , module Libgit2.Merge
   , module Libgit2.OID
+  , module Libgit2.Reflog
   , module Libgit2.Refs
   , module Libgit2.Repository
   , module Libgit2.Revwalk
@@ -44,6 +45,7 @@ import           Libgit2.Global
 import           Libgit2.Index
 import           Libgit2.Merge
 import           Libgit2.OID
+import           Libgit2.Reflog
 import           Libgit2.Refs
 import           Libgit2.Repository
 import           Libgit2.Revwalk
