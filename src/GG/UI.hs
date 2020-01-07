@@ -131,7 +131,7 @@ doAction a s = do
       let pos = s ^. field @"commitList" . listSelectedL . to (fromMaybe 0)
       result <- R.doAction (s ^. field @"repository") (s ^. field @"head" . field @"ref") commitOIDs pos a
       case result of
-        R.Success newPos -> do
+        R.Success newPos _summary -> do
           (head, headCommit) <- R.readRepoState $ s ^. field @"repository"
           (tailCommits, contCommit') <- R.readNCommits (pos + 500) headCommit
           moreCommitsState <- mapM R.readCommit (headCommit : tailCommits)

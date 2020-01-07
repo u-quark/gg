@@ -15,6 +15,10 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DeriveFoldable    #-}
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveTraversable #-}
+
 module GG.Repo
   ( readNCommits
   , readRepository
@@ -100,6 +104,7 @@ readRepoState repo = do
 data ActionOutcome
   = Success
       { newCursorPosition :: Int
+      , actionSummary     :: ActionSummary String
       }
   | InvalidAction
   | ApplyFailed
@@ -110,12 +115,13 @@ doAction :: G.Repository -> G.Reference -> [G.OID] -> Int -> Action -> IO Action
 doAction repo ref commitOIDs pos action = do
   let aM = action commitOIDs pos
   case aM of
-    Just (Plan base commands newPos) -> do
+    Just (Plan base commands newPos summary) -> do
       res <- loop base commands
       case res of
         Right oid -> do
-          _ <- G.referenceSetTarget ref oid "gg - apply"
-          pure $ Success newPos
+          summaryStr <- traverse (oidToCommitMessage repo) summary
+          _ <- G.referenceSetTarget ref oid (describeActionSummary summaryStr <> " [gg]")
+          pure $ Success newPos summaryStr
         Left message -> pure $ ApplyFailed message
     Nothing -> pure InvalidAction
   where
@@ -125,6 +131,9 @@ doAction repo ref commitOIDs pos action = do
       case res of
         Right newBaseOid -> loop newBaseOid cs
         Left _           -> pure res
+    oidToCommitMessage repository oid = do
+      commit <- G.commitLookup repository oid
+      G.commitSummary commit
 
 doCommand :: Command -> G.Repository -> G.OID -> IO (Either S.Notification G.OID)
 doCommand (Apply oid) repo baseOid = doCommand_ repo oid baseOid getMessageAndAuthor False
@@ -200,8 +209,29 @@ data Command
   | Squash G.OID MessageSquashStrategy
 
 data Plan =
-  Plan G.OID [Command] Int
-  -- Plan baseCommit commands newCursorPosition
+  Plan G.OID [Command] Int (ActionSummary G.OID)
+  -- Plan baseCommit commands newCursorPosition actionSummary
+
+data ActionSummary commit
+  -- MoveUp commit aboveCommit
+  = MoveUp commit commit
+  -- MoveDown commit belowCommit
+  | MoveDown commit commit
+  -- SquashInto commit intoCommit
+  | SquashInto commit commit
+  -- FixupInto commit intoCommit
+  | FixupInto commit commit
+  deriving (Functor, Foldable, Traversable)
+
+describeActionSummary :: ActionSummary String -> String
+describeActionSummary (MoveUp commit aboveCommit) =
+  "Move up commit \"" <> commit <> "\" above commit \"" <> aboveCommit <> "\""
+describeActionSummary (MoveDown commit belowCommit) =
+  "Move down commit \"" <> commit <> "\" below commit \"" <> belowCommit <> "\""
+describeActionSummary (SquashInto commit intoCommit) =
+  "Squash commit \"" <> commit <> "\" into commit \"" <> intoCommit <> "\""
+describeActionSummary (FixupInto commit intoCommit) =
+  "Fixup commit \"" <> commit <> "\" into commit \"" <> intoCommit <> "\""
 
 type Action = [G.OID] -> Int -> Maybe Plan
 
@@ -209,7 +239,7 @@ moveCommitUp :: Action
 moveCommitUp commitOIDs pos =
   case pos of
     x
-      | x >= 1 -> Just $ Plan base (reverse $ theRest <> lastTwo) (pos - 1)
+      | x >= 1 -> Just $ Plan base (reverse $ theRest <> lastTwo) (pos - 1) (MoveUp (commitOIDs !! pos) base)
     _ -> Nothing
   where
     base = commitOIDs !! (pos + 1)
@@ -220,18 +250,19 @@ moveCommitDown :: Action
 moveCommitDown commitOIDs pos =
   case pos of
     x
-      | x < length commitOIDs -> Just $ Plan base (reverse $ theRest <> lastTwo) (pos + 1)
+      | x < length commitOIDs ->
+        Just $ Plan base (reverse $ theRest <> lastTwo) (pos + 1) (MoveDown (commitOIDs !! (pos + 1)) base)
     _ -> Nothing
   where
     base = commitOIDs !! (pos + 2)
     lastTwo = [Apply $ commitOIDs !! (pos + 1), Apply $ commitOIDs !! pos]
     theRest = [Apply c | c <- take pos commitOIDs]
 
-_squashCommit :: MessageSquashStrategy -> Action
-_squashCommit mss commitOIDs pos =
+_squashCommit :: MessageSquashStrategy -> (G.OID -> G.OID -> ActionSummary G.OID) -> Action
+_squashCommit mss summary commitOIDs pos =
   case pos of
     x
-      | x < length commitOIDs -> Just $ Plan base (reverse $ theRest <> lastTwo) pos
+      | x < length commitOIDs -> Just $ Plan base (reverse $ theRest <> lastTwo) pos (summary (commitOIDs !! pos) base)
     _ -> Nothing
   where
     base = commitOIDs !! (pos + 2)
@@ -239,7 +270,7 @@ _squashCommit mss commitOIDs pos =
     theRest = [Apply c | c <- take pos commitOIDs]
 
 squashCommit :: Action
-squashCommit = _squashCommit MergeAtBottom
+squashCommit = _squashCommit MergeAtBottom SquashInto
 
 fixupCommit :: Action
-fixupCommit = _squashCommit KeepBase
+fixupCommit = _squashCommit KeepBase FixupInto
