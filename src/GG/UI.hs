@@ -73,6 +73,7 @@ handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doRebaseAction R.MoveUpA s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doRebaseAction R.MoveDownA s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'S') [])) = doRebaseAction R.SquashA s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doRebaseAction R.FixupA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'D') [])) = doRebaseAction R.DeleteA s
 handleEvent s (VtyEvent ev) = handleScrolling s ev
 handleEvent s (AppEvent S.Tick) = tickEventHandler (s ^. field @"timers") s
 handleEvent s _ = continue s

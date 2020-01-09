@@ -106,6 +106,7 @@ data RebaseAction
   | MoveDownA
   | SquashA
   | FixupA
+  | DeleteA
 
 type RebaseActionPlanner = [G.OID] -> Int -> Maybe RebasePlan
 
@@ -133,6 +134,8 @@ data ActionSummary commit
   | SquashS commit commit
   -- FixupS commit intoCommit
   | FixupS commit commit
+  -- DeleteS commit
+  | DeleteS commit
   deriving (Functor, Foldable, Traversable)
 
 data ActionOutcome
@@ -245,12 +248,14 @@ describeActionSummary (SquashS commit intoCommit) =
   "Squash commit \"" <> commit <> "\" into commit \"" <> intoCommit <> "\""
 describeActionSummary (FixupS commit intoCommit) =
   "Fixup commit \"" <> commit <> "\" into commit \"" <> intoCommit <> "\""
+describeActionSummary (DeleteS commit) = "Delete commit \"" <> commit <> "\""
 
 toRebaseActionPlanner :: RebaseAction -> RebaseActionPlanner
 toRebaseActionPlanner MoveUpA   = moveUpP
 toRebaseActionPlanner MoveDownA = moveDownP
 toRebaseActionPlanner SquashA   = squashP
 toRebaseActionPlanner FixupA    = fixupP
+toRebaseActionPlanner DeleteA   = deleteP
 
 moveUpP :: RebaseActionPlanner
 moveUpP commitOIDs pos =
@@ -292,3 +297,13 @@ squashP = _squashP MergeAtBottom SquashS
 
 fixupP :: RebaseActionPlanner
 fixupP = _squashP KeepBase FixupS
+
+deleteP :: RebaseActionPlanner
+deleteP commitOIDs pos =
+  case pos of
+    x
+      | x < length commitOIDs -> Just $ RebasePlan base (reverse theRest) pos (DeleteS (commitOIDs !! pos))
+    _ -> Nothing
+  where
+    base = commitOIDs !! (pos + 1)
+    theRest = [ApplyC c | c <- take pos commitOIDs]
