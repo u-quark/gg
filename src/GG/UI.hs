@@ -40,7 +40,6 @@ import           Data.String.Utils      (replace)
 import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime, zonedTimeToLocalTime,
                                          zonedTimeZone)
-import           Data.Vector            (toList)
 import qualified GG.Repo                as R
 import qualified GG.State               as S
 import           GG.Timers              (AnimationCb, AnimationEndCb,
@@ -70,10 +69,10 @@ handleEvent :: S.State -> BrickEvent S.Name S.Event -> EventM S.Name (Next S.Sta
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'q') [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEnter [])) = openCommitAction s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doAction R.moveCommitUp s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doAction R.moveCommitDown s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'S') [])) = doAction R.squashCommit s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doAction R.fixupCommit s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doRebaseAction R.MoveUpA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doRebaseAction R.MoveDownA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'S') [])) = doRebaseAction R.SquashA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doRebaseAction R.FixupA s
 handleEvent s (VtyEvent ev) = handleScrolling s ev
 handleEvent s (AppEvent S.Tick) = tickEventHandler (s ^. field @"timers") s
 handleEvent s _ = continue s
@@ -123,13 +122,12 @@ checkNeedsMoreCommits s =
       pure $ S.addMoreCommits moreCommitsState contCommit' s
     else pure s
 
-doAction :: R.Action -> S.State -> EventM S.Name (Next S.State)
-doAction a s = do
+doRebaseAction :: R.RebaseAction -> S.State -> EventM S.Name (Next S.State)
+doRebaseAction a s = do
   s' <-
     liftIO $ do
-      let commitOIDs = map (^. field @"oid") (s ^. field @"commitList" . listElementsL . to toList)
       let pos = s ^. field @"commitList" . listSelectedL . to (fromMaybe 0)
-      result <- R.doAction (s ^. field @"repository") (s ^. field @"head" . field @"ref") commitOIDs pos a
+      result <- R.doAction (s ^. field @"repository") (R.RebaseAction pos a)
       case result of
         R.Success newPos _summary -> do
           (head, headCommit) <- R.readRepoState $ s ^. field @"repository"

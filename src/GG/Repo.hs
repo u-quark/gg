@@ -25,13 +25,10 @@ module GG.Repo
   , readRepoState
   , readCommit
   , readCommitDiff
-  , Action
+  , Action(..)
+  , RebaseAction(..)
   , ActionOutcome(..)
   , doAction
-  , moveCommitUp
-  , moveCommitDown
-  , squashCommit
-  , fixupCommit
   ) where
 
 import           Data.Maybe (fromJust)
@@ -101,6 +98,43 @@ readRepoState repo = do
   commit <- refToCommit repo headRef
   pure (S.Reference headRef headName, commit)
 
+data Action =
+  RebaseAction Int RebaseAction
+
+data RebaseAction
+  = MoveUpA
+  | MoveDownA
+  | SquashA
+  | FixupA
+
+type RebaseActionPlanner = [G.OID] -> Int -> Maybe RebasePlan
+
+data RebasePlan
+  -- RebasePlan baseCommit commands newCursorPosition actionSummary
+      =
+  RebasePlan G.OID [Command] Int (ActionSummary G.OID)
+
+data Command
+  -- ApplyC commit
+  = ApplyC G.OID
+  -- SquashC commit messageStrategy
+  | SquashC G.OID MessageSquashStrategy
+
+data MessageSquashStrategy
+  = KeepBase
+  | MergeAtBottom
+
+data ActionSummary commit
+  -- MoveUpS commit aboveCommit
+  = MoveUpS commit commit
+  -- MoveDownS commit belowCommit
+  | MoveDownS commit commit
+  -- SquashS commit intoCommit
+  | SquashS commit commit
+  -- FixupS commit intoCommit
+  | FixupS commit commit
+  deriving (Functor, Foldable, Traversable)
+
 data ActionOutcome
   = Success
       { newCursorPosition :: Int
@@ -111,11 +145,15 @@ data ActionOutcome
       { conflictNotification :: S.Notification
       }
 
-doAction :: G.Repository -> G.Reference -> [G.OID] -> Int -> Action -> IO ActionOutcome
-doAction repo ref commitOIDs pos action = do
-  let aM = action commitOIDs pos
+doAction :: G.Repository -> Action -> IO ActionOutcome
+doAction repo (RebaseAction pos action) = do
+  ref <- G.repositoryHead repo
+  headCommit <- refToCommit repo ref
+  (tailCommits, _) <- readNCommits (pos + 3) headCommit
+  oids <- traverse G.commitId (headCommit : tailCommits)
+  let aM = toRebaseActionPlanner action oids pos
   case aM of
-    Just (Plan base commands newPos summary) -> do
+    Just (RebasePlan base commands newPos summary) -> do
       res <- loop base commands
       case res of
         Right oid -> do
@@ -136,10 +174,10 @@ doAction repo ref commitOIDs pos action = do
       G.commitSummary commit
 
 doCommand :: Command -> G.Repository -> G.OID -> IO (Either S.Notification G.OID)
-doCommand (Apply oid) repo baseOid = doCommand_ repo oid baseOid getMessageAndAuthor False
+doCommand (ApplyC oid) repo baseOid = doCommand_ repo oid baseOid getMessageAndAuthor False
   where
     getMessageAndAuthor _baseMessage cherryMessage _baseAuthor cherryAuthor = pure (cherryMessage, cherryAuthor)
-doCommand (Squash oid messageSquashStrategy) repo baseOid =
+doCommand (SquashC oid messageSquashStrategy) repo baseOid =
   doCommand_ repo oid baseOid (squashCommitInfo messageSquashStrategy) True
 
 doCommand_ ::
@@ -198,79 +236,59 @@ squashCommitInfo MergeAtBottom baseMessage cherryMessage baseAuthor cherryAuthor
            else "")
   pure (mergedMessage, baseAuthor)
 
-data MessageSquashStrategy
-  = KeepBase
-  | MergeAtBottom
-
-data Command
-  -- Apply commit
-  = Apply G.OID
-  -- Squash commit messageStrategy
-  | Squash G.OID MessageSquashStrategy
-
-data Plan =
-  Plan G.OID [Command] Int (ActionSummary G.OID)
-  -- Plan baseCommit commands newCursorPosition actionSummary
-
-data ActionSummary commit
-  -- MoveUp commit aboveCommit
-  = MoveUp commit commit
-  -- MoveDown commit belowCommit
-  | MoveDown commit commit
-  -- SquashInto commit intoCommit
-  | SquashInto commit commit
-  -- FixupInto commit intoCommit
-  | FixupInto commit commit
-  deriving (Functor, Foldable, Traversable)
-
 describeActionSummary :: ActionSummary String -> String
-describeActionSummary (MoveUp commit aboveCommit) =
+describeActionSummary (MoveUpS commit aboveCommit) =
   "Move up commit \"" <> commit <> "\" above commit \"" <> aboveCommit <> "\""
-describeActionSummary (MoveDown commit belowCommit) =
+describeActionSummary (MoveDownS commit belowCommit) =
   "Move down commit \"" <> commit <> "\" below commit \"" <> belowCommit <> "\""
-describeActionSummary (SquashInto commit intoCommit) =
+describeActionSummary (SquashS commit intoCommit) =
   "Squash commit \"" <> commit <> "\" into commit \"" <> intoCommit <> "\""
-describeActionSummary (FixupInto commit intoCommit) =
+describeActionSummary (FixupS commit intoCommit) =
   "Fixup commit \"" <> commit <> "\" into commit \"" <> intoCommit <> "\""
 
-type Action = [G.OID] -> Int -> Maybe Plan
+toRebaseActionPlanner :: RebaseAction -> RebaseActionPlanner
+toRebaseActionPlanner MoveUpA   = moveUpP
+toRebaseActionPlanner MoveDownA = moveDownP
+toRebaseActionPlanner SquashA   = squashP
+toRebaseActionPlanner FixupA    = fixupP
 
-moveCommitUp :: Action
-moveCommitUp commitOIDs pos =
+moveUpP :: RebaseActionPlanner
+moveUpP commitOIDs pos =
   case pos of
     x
-      | x >= 1 -> Just $ Plan base (reverse $ theRest <> lastTwo) (pos - 1) (MoveUp (commitOIDs !! pos) base)
+      | x >= 1 -> Just $ RebasePlan base (reverse $ theRest <> lastTwo) (pos - 1) (MoveUpS (commitOIDs !! pos) base)
     _ -> Nothing
   where
     base = commitOIDs !! (pos + 1)
-    lastTwo = [Apply $ commitOIDs !! pos, Apply $ commitOIDs !! (pos - 1)]
-    theRest = [Apply c | c <- take (pos - 1) commitOIDs]
+    lastTwo = [ApplyC $ commitOIDs !! pos, ApplyC $ commitOIDs !! (pos - 1)]
+    theRest = [ApplyC c | c <- take (pos - 1) commitOIDs]
 
-moveCommitDown :: Action
-moveCommitDown commitOIDs pos =
+moveDownP :: RebaseActionPlanner
+moveDownP commitOIDs pos =
   case pos of
     x
       | x < length commitOIDs ->
-        Just $ Plan base (reverse $ theRest <> lastTwo) (pos + 1) (MoveDown (commitOIDs !! (pos + 1)) base)
+        Just $ RebasePlan base (reverse $ theRest <> lastTwo) (pos + 1) (MoveDownS (commitOIDs !! (pos + 1)) base)
     _ -> Nothing
   where
     base = commitOIDs !! (pos + 2)
-    lastTwo = [Apply $ commitOIDs !! (pos + 1), Apply $ commitOIDs !! pos]
-    theRest = [Apply c | c <- take pos commitOIDs]
+    lastTwo = [ApplyC $ commitOIDs !! (pos + 1), ApplyC $ commitOIDs !! pos]
+    theRest = [ApplyC c | c <- take pos commitOIDs]
 
-_squashCommit :: MessageSquashStrategy -> (G.OID -> G.OID -> ActionSummary G.OID) -> Action
-_squashCommit mss summary commitOIDs pos =
+_squashP :: MessageSquashStrategy -> (G.OID -> G.OID -> ActionSummary G.OID) -> RebaseActionPlanner
+_squashP mss summary commitOIDs pos =
   case pos of
     x
-      | x < length commitOIDs -> Just $ Plan base (reverse $ theRest <> lastTwo) pos (summary (commitOIDs !! pos) base)
+      | x < length commitOIDs ->
+        Just $ RebasePlan base (reverse $ theRest <> lastTwo) pos (summary (commitOIDs !! pos) base)
     _ -> Nothing
   where
     base = commitOIDs !! (pos + 2)
-    lastTwo = [Squash (commitOIDs !! pos) mss, Apply $ commitOIDs !! (pos + 1)]
-    theRest = [Apply c | c <- take pos commitOIDs]
+    lastTwo = [SquashC (commitOIDs !! pos) mss, ApplyC $ commitOIDs !! (pos + 1)]
+    theRest = [ApplyC c | c <- take pos commitOIDs]
 
-squashCommit :: Action
-squashCommit = _squashCommit MergeAtBottom SquashInto
+squashP :: RebaseActionPlanner
+squashP = _squashP MergeAtBottom SquashS
 
-fixupCommit :: Action
-fixupCommit = _squashCommit KeepBase FixupInto
+fixupP :: RebaseActionPlanner
+fixupP = _squashP KeepBase FixupS
