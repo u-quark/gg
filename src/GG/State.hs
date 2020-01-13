@@ -29,6 +29,7 @@ import           Control.Lens                 (Traversal', ix, over, set, (&),
 import           Data.Generics.Product.Fields (field)
 import           Data.Time                    (ZonedTime)
 import qualified Data.Vector                  as Vec
+import           GG.Actions.Common             (ActionFailure)
 import           GG.Timers                    (Timers)
 import           GHC.Generics                 (Generic)
 import qualified Libgit2                      as G
@@ -78,10 +79,6 @@ data OpenCommit =
     }
   deriving (Generic)
 
-data Notification
-  = ApplyConflict String String
-  | ApplyMergeCommit String
-
 data State =
   State
     { commitList   :: L.List Name Commit
@@ -89,7 +86,7 @@ data State =
     , repository   :: G.Repository
     , contCommit   :: G.Commit
     , openCommit   :: Maybe OpenCommit
-    , notification :: Maybe (Notification, Double)
+    , notification :: Maybe (ActionFailure, Double)
     , timers       :: Timers State Name TimerName
     }
   deriving (Generic)

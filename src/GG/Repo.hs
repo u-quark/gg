@@ -15,10 +15,6 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DeriveFoldable    #-}
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveTraversable #-}
-
 module GG.Repo
   ( readNCommits
   , readRepository
@@ -29,11 +25,14 @@ module GG.Repo
   , RebaseAction(..)
   , ActionOutcome(..)
   , doAction
+  , reflogSuffix
   ) where
 
-import           Data.Maybe (fromJust)
-import qualified GG.State   as S
-import qualified Libgit2    as G
+import           Data.Maybe        (fromJust)
+import           GG.Actions.Common
+import           GG.Actions.Undo   (doRedo, doUndo)
+import qualified GG.State          as S
+import qualified Libgit2           as G
 
 readCommit :: G.Commit -> IO S.Commit
 readCommit commit = do
@@ -98,22 +97,40 @@ readRepoState repo = do
   commit <- refToCommit repo headRef
   pure (S.Reference headRef headName, commit)
 
-data Action =
-  RebaseAction Int RebaseAction
+doAction :: G.Repository -> Action -> IO ActionOutcome
+doAction repo (RebaseAction pos action) = do
+  ref <- G.repositoryHead repo
+  headCommit <- refToCommit repo ref
+  (tailCommits, _) <- readNCommits (pos + 3) headCommit
+  oids <- traverse G.commitId (headCommit : tailCommits)
+  let aM = toRebaseActionPlanner action oids pos
+  case aM of
+    Just (Plan base commands newPos summary) -> do
+      res <- loop base commands
+      case res of
+        Right oid -> do
+          summaryStr <- traverse (oidToCommitMessage repo) summary
+          _ <- G.referenceSetTarget ref oid (describeActionSummary summaryStr <> reflogSuffix)
+          pure $ Success newPos summaryStr
+        Left failure -> pure $ Failure failure
+    Nothing -> pure $ Failure InvalidAction
+  where
+    loop baseOid [] = pure $ Right baseOid
+    loop baseOid (c:cs) = do
+      res <- doCommand c repo baseOid
+      case res of
+        Right newBaseOid -> loop newBaseOid cs
+        Left _           -> pure res
+    oidToCommitMessage repository oid = do
+      commit <- G.commitLookup repository oid
+      G.commitSummary commit
+doAction repo UndoA = doUndo repo
+doAction repo RedoA = doRedo repo
 
-data RebaseAction
-  = MoveUpA
-  | MoveDownA
-  | SquashA
-  | FixupA
-  | DeleteA
-
-type RebaseActionPlanner = [G.OID] -> Int -> Maybe RebasePlan
-
-data RebasePlan
-  -- RebasePlan baseCommit commands newCursorPosition actionSummary
+data Plan
+  -- Plan baseCommit commands newCursorPosition actionSummary
       =
-  RebasePlan G.OID [Command] Int (ActionSummary G.OID)
+  Plan G.OID [Command] Int (ActionSummary G.OID)
 
 data Command
   -- ApplyC commit
@@ -125,58 +142,7 @@ data MessageSquashStrategy
   = KeepBase
   | MergeAtBottom
 
-data ActionSummary commit
-  -- MoveUpS commit aboveCommit
-  = MoveUpS commit commit
-  -- MoveDownS commit belowCommit
-  | MoveDownS commit commit
-  -- SquashS commit intoCommit
-  | SquashS commit commit
-  -- FixupS commit intoCommit
-  | FixupS commit commit
-  -- DeleteS commit
-  | DeleteS commit
-  deriving (Functor, Foldable, Traversable)
-
-data ActionOutcome
-  = Success
-      { newCursorPosition :: Int
-      , actionSummary     :: ActionSummary String
-      }
-  | InvalidAction
-  | ApplyFailed
-      { conflictNotification :: S.Notification
-      }
-
-doAction :: G.Repository -> Action -> IO ActionOutcome
-doAction repo (RebaseAction pos action) = do
-  ref <- G.repositoryHead repo
-  headCommit <- refToCommit repo ref
-  (tailCommits, _) <- readNCommits (pos + 3) headCommit
-  oids <- traverse G.commitId (headCommit : tailCommits)
-  let aM = toRebaseActionPlanner action oids pos
-  case aM of
-    Just (RebasePlan base commands newPos summary) -> do
-      res <- loop base commands
-      case res of
-        Right oid -> do
-          summaryStr <- traverse (oidToCommitMessage repo) summary
-          _ <- G.referenceSetTarget ref oid (describeActionSummary summaryStr <> " [gg]")
-          pure $ Success newPos summaryStr
-        Left message -> pure $ ApplyFailed message
-    Nothing -> pure InvalidAction
-  where
-    loop baseOid [] = pure $ Right baseOid
-    loop baseOid (c:cs) = do
-      res <- doCommand c repo baseOid
-      case res of
-        Right newBaseOid -> loop newBaseOid cs
-        Left _           -> pure res
-    oidToCommitMessage repository oid = do
-      commit <- G.commitLookup repository oid
-      G.commitSummary commit
-
-doCommand :: Command -> G.Repository -> G.OID -> IO (Either S.Notification G.OID)
+doCommand :: Command -> G.Repository -> G.OID -> IO (Either ActionFailure G.OID)
 doCommand (ApplyC oid) repo baseOid = doCommand_ repo oid baseOid getMessageAndAuthor False
   where
     getMessageAndAuthor _baseMessage cherryMessage _baseAuthor cherryAuthor = pure (cherryMessage, cherryAuthor)
@@ -189,13 +155,13 @@ doCommand_ ::
   -> G.OID
   -> (String -> String -> G.Signature -> G.Signature -> IO (String, G.Signature))
   -> Bool
-  -> IO (Either S.Notification G.OID)
+  -> IO (Either ActionFailure G.OID)
 doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
   commit <- G.commitLookup repo oid
   parentCount <- G.commitParentCount commit
   summary <- G.commitSummary commit
   if parentCount > 1
-    then pure $ Left $ S.ApplyMergeCommit summary
+    then pure $ Left $ RebaseMergeCommit summary
     else do
       tree <- G.commitTree commit
       parentCommit <- G.commitParent commit 0
@@ -207,7 +173,7 @@ doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
       index <- G.mergeTrees repo parentTree baseTree tree mergeOptions
       hasConflicts <- G.indexHasConflicts index
       if hasConflicts
-        then pure $ Left $ S.ApplyConflict summary baseSummary
+        then pure $ Left $ RebaseConflict summary baseSummary
         else do
           cherryMessage <- G.commitMessage commit
           cherryAuthor <- G.commitAuthor commit
@@ -249,6 +215,10 @@ describeActionSummary (SquashS commit intoCommit) =
 describeActionSummary (FixupS commit intoCommit) =
   "Fixup commit \"" <> commit <> "\" into commit \"" <> intoCommit <> "\""
 describeActionSummary (DeleteS commit) = "Delete commit \"" <> commit <> "\""
+describeActionSummary (UndoS summary) = "Undo: " <> summary
+describeActionSummary (RedoS summary) = "Redo: " <> summary
+
+type RebaseActionPlanner = [G.OID] -> Int -> Maybe Plan
 
 toRebaseActionPlanner :: RebaseAction -> RebaseActionPlanner
 toRebaseActionPlanner MoveUpA   = moveUpP
@@ -261,7 +231,7 @@ moveUpP :: RebaseActionPlanner
 moveUpP commitOIDs pos =
   case pos of
     x
-      | x >= 1 -> Just $ RebasePlan base (reverse $ theRest <> lastTwo) (pos - 1) (MoveUpS (commitOIDs !! pos) base)
+      | x >= 1 -> Just $ Plan base (reverse $ theRest <> lastTwo) (pos - 1) (MoveUpS (commitOIDs !! pos) base)
     _ -> Nothing
   where
     base = commitOIDs !! (pos + 1)
@@ -273,7 +243,7 @@ moveDownP commitOIDs pos =
   case pos of
     x
       | x < length commitOIDs ->
-        Just $ RebasePlan base (reverse $ theRest <> lastTwo) (pos + 1) (MoveDownS (commitOIDs !! (pos + 1)) base)
+        Just $ Plan base (reverse $ theRest <> lastTwo) (pos + 1) (MoveDownS (commitOIDs !! (pos + 1)) base)
     _ -> Nothing
   where
     base = commitOIDs !! (pos + 2)
@@ -284,8 +254,7 @@ _squashP :: MessageSquashStrategy -> (G.OID -> G.OID -> ActionSummary G.OID) -> 
 _squashP mss summary commitOIDs pos =
   case pos of
     x
-      | x < length commitOIDs ->
-        Just $ RebasePlan base (reverse $ theRest <> lastTwo) pos (summary (commitOIDs !! pos) base)
+      | x < length commitOIDs -> Just $ Plan base (reverse $ theRest <> lastTwo) pos (summary (commitOIDs !! pos) base)
     _ -> Nothing
   where
     base = commitOIDs !! (pos + 2)
@@ -302,7 +271,7 @@ deleteP :: RebaseActionPlanner
 deleteP commitOIDs pos =
   case pos of
     x
-      | x < length commitOIDs -> Just $ RebasePlan base (reverse theRest) pos (DeleteS (commitOIDs !! pos))
+      | x < length commitOIDs -> Just $ Plan base (reverse theRest) pos (DeleteS (commitOIDs !! pos))
     _ -> Nothing
   where
     base = commitOIDs !! (pos + 1)

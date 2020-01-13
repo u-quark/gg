@@ -40,9 +40,10 @@ import           Data.String.Utils      (replace)
 import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime, zonedTimeToLocalTime,
                                          zonedTimeZone)
+import qualified GG.Actions.Common      as A
 import qualified GG.Repo                as R
 import qualified GG.State               as S
-import           GG.Timers              (AnimationCb, AnimationEndCb,
+import           GG.Timers              (AnimationCb, AnimationEndCb, Duration,
                                          addAnimation, tickEventHandler)
 import qualified Graphics.Vty           as V
 import qualified Libgit2                as G
@@ -74,6 +75,8 @@ handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doRebaseAction R.MoveDownA
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'S') [])) = doRebaseAction R.SquashA s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doRebaseAction R.FixupA s
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'D') [])) = doRebaseAction R.DeleteA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'Z') [])) = doAction R.UndoA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'R') [])) = doAction R.RedoA s
 handleEvent s (VtyEvent ev) = handleScrolling s ev
 handleEvent s (AppEvent S.Tick) = tickEventHandler (s ^. field @"timers") s
 handleEvent s _ = continue s
@@ -123,24 +126,46 @@ checkNeedsMoreCommits s =
       pure $ S.addMoreCommits moreCommitsState contCommit' s
     else pure s
 
-doRebaseAction :: R.RebaseAction -> S.State -> EventM S.Name (Next S.State)
-doRebaseAction a s = do
-  s' <-
-    liftIO $ do
-      let pos = s ^. field @"commitList" . listSelectedL . to (fromMaybe 0)
-      result <- R.doAction (s ^. field @"repository") (R.RebaseAction pos a)
-      case result of
-        R.Success newPos _summary -> do
-          (head, headCommit) <- R.readRepoState $ s ^. field @"repository"
-          (tailCommits, contCommit') <- R.readNCommits (pos + 500) headCommit
-          moreCommitsState <- mapM R.readCommit (headCommit : tailCommits)
-          pure $ (S.updateRepoState contCommit' head moreCommitsState . S.updateCommitsPos newPos) s
-        R.ApplyFailed notification -> do
-          let s' = set (field @"notification") (Just (notification, 1)) s
-          addAnimation (s ^. field @"timers") S.Notification 5 notificationAnimation notificationAnimationEnd
-          pure s'
-        R.InvalidAction -> pure s
+handleActionSuccessReload :: S.State -> Int -> A.ActionSummary String -> IO S.State
+handleActionSuccessReload s newPos _summary = do
+  (head, headCommit) <- R.readRepoState $ s ^. field @"repository"
+  (tailCommits, contCommit') <- R.readNCommits (newPos + 500) headCommit
+  moreCommitsState <- mapM R.readCommit (headCommit : tailCommits)
+  pure $ (S.updateRepoState contCommit' head moreCommitsState . S.updateCommitsPos newPos) s
+
+handleActionFailure :: S.State -> A.ActionFailure -> IO S.State
+handleActionFailure s failure = do
+  let s' = set (field @"notification") (Just (failure, 1)) s
+  addAnimation
+    (s ^. field @"timers")
+    S.Notification
+    (failureNotificationDuration failure)
+    notificationAnimation
+    notificationAnimationEnd
+  pure s'
+
+handleAction :: S.State -> R.Action -> IO S.State
+handleAction s action = do
+  result <- R.doAction (s ^. field @"repository") action
+  case result of
+    R.Success newPos summary -> handleActionSuccessReload s newPos summary
+    R.Failure failure        -> handleActionFailure s failure
+
+doAction :: R.Action -> S.State -> EventM S.Name (Next S.State)
+doAction action s = do
+  s' <- liftIO $ handleAction s action
   continue s'
+
+doRebaseAction :: R.RebaseAction -> S.State -> EventM S.Name (Next S.State)
+doRebaseAction rebaseAction s = do
+  let pos = s ^. field @"commitList" . listSelectedL . to (fromMaybe 0)
+  s' <- liftIO $ handleAction s (R.RebaseAction pos rebaseAction)
+  continue s'
+
+failureNotificationDuration :: A.ActionFailure -> Duration
+failureNotificationDuration (A.RebaseConflict _ _)  = 5
+failureNotificationDuration (A.RebaseMergeCommit _) = 5
+failureNotificationDuration _                       = 2
 
 notificationAnimation :: AnimationCb S.State S.Name
 notificationAnimation t s = do
@@ -175,6 +200,9 @@ notificationAttr = "notification"
 
 notificationCommitAttr :: AttrName
 notificationCommitAttr = notificationAttr <> "commit"
+
+notificationFailureAttr :: AttrName
+notificationFailureAttr = notificationAttr <> "failure"
 
 commitSummary :: AttrName
 commitSummary = "commit_summary"
@@ -279,20 +307,23 @@ drawStatusBar s =
     (withAttr statusBranchAttr (str ("On " <> s ^. field @"head" . field @"shorthand")) <+> padRight Max (str " ")) <+>
   drawNotification (s ^. field @"notification")
 
-drawNotification :: Maybe (S.Notification, Double) -> Widget S.Name
+drawNotification :: Maybe (A.ActionFailure, Double) -> Widget S.Name
 drawNotification =
   \case
     Nothing -> emptyWidget
     Just (notification, opacity) ->
       case notification of
-        S.ApplyConflict commit baseCommit ->
+        A.RebaseConflict commit baseCommit ->
           withAnimAttr notificationAttr opacity $ str boomIconMaybe <+> str "Conflicts applying commit " <+>
           withAnimAttr notificationCommitAttr opacity (str commit) <+>
           str " on top of commit " <+>
           withAnimAttr notificationCommitAttr opacity (str baseCommit)
-        S.ApplyMergeCommit commit ->
+        A.RebaseMergeCommit commit ->
           withAnimAttr notificationAttr opacity $ str boomIconMaybe <+> str "Can not apply merge commit " <+>
           withAnimAttr notificationCommitAttr opacity (str commit)
+        A.UndoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> undoIcon)
+        A.RedoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> redoIcon)
+        A.InvalidAction -> withAnimAttr notificationFailureAttr opacity (str noIcon)
       where boomIconMaybe =
               if opacity > 0.6
                 then boomIcon
@@ -634,6 +665,15 @@ carriageReturnIcon = "\x21B5"
 boomIcon :: String
 boomIcon = "\x1F4A5"
 
+noIcon :: String
+noIcon = "\x1f6ab\xFE0E"
+
+undoIcon :: String
+undoIcon = "\x21b6"
+
+redoIcon :: String
+redoIcon = "\x21b6"
+
 drawDiffStats :: S.OpenCommit -> Widget S.Name
 drawDiffStats c =
   foldr1
@@ -761,6 +801,8 @@ withAnimAttr attr
   | attr == notificationAttr = withBlendFgColor (base03 `on` base2) base03 base2
 withAnimAttr attr
   | attr == notificationCommitAttr = withBlendFgColor (base03 `on` base2 `V.withStyle` V.bold) base03 base2
+withAnimAttr attr
+  | attr == notificationFailureAttr = withBlendFgColor (red `on` base2) red base2
 withAnimAttr attr = \_a -> withAttr attr
 
 withBlendFgColor :: V.Attr -> V.Color -> V.Color -> Double -> Widget S.Name -> Widget S.Name

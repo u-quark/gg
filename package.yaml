@@ -48,6 +48,8 @@ library:
   - git2
   exposed-modules:
     - Lib
+    - GG.Actions.Common
+    - GG.Actions.Undo
     - GG.State
     - GG.UI
     - GG.Repo

@@ -22,6 +22,7 @@ module GG.Timers
   , tickEventHandler
   , AnimationCb
   , AnimationEndCb
+  , Duration
   ) where
 
 import qualified Brick                   as B
