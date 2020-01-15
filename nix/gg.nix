@@ -26,7 +26,8 @@ mkDerivation {
   pname = "gg";
   version = "0.1.0.0";
   src = stdenv.lib.sourceByRegex ./.. [
-    "app" "app/.*" "src" "src/.*" "test" "test/.*" "stack.yaml" "package.yaml" "Setup.hs" "LICENSE"
+    "app" "app/.*" "src" "src/.*" "test" "test/.*"
+    "stack.yaml" "package.yaml" "Setup.hs" "LICENSE" "README.md" "ChangeLog.md"
   ];
   isLibrary = false;
   isExecutable = true;
