@@ -46,38 +46,37 @@ extractAction = reverse . drop (length reflogSuffix) . reverse
 extractUndoAction :: String -> String
 extractUndoAction = extractAction . drop (length undoPrefix)
 
-findCommitToUndoTo :: G.Repository -> IO (Either UndoFailure (G.OID, String))
-findCommitToUndoTo repo = do
-  ref <- G.repositoryHead repo
-  refName <- G.referenceName ref
-  reflog <- G.reflogRead repo refName
-  maxIndex <- G.reflogEntrycount reflog
-  loop reflog maxIndex 0 0
-  where
-    loop :: G.Reflog -> Int -> Int -> Int -> IO (Either UndoFailure (G.OID, String))
-    loop reflog maxIndex index ignoreStackCounter =
-      if index >= maxIndex
-        then pure $ Left NoActionsFound
-        else do
-          entry <- G.reflogEntryByIndex reflog index
-          message <- G.reflogEntryMessage entry
-          if isOurEntry message
-            then if isUndoEntry message
-                   then loop reflog maxIndex (index + 1) (ignoreStackCounter + 1)
-                   else if isRedoEntry message
-                          then loop reflog maxIndex (index + 1) (ignoreStackCounter - 1)
-                          else if ignoreStackCounter == 0
-                                 then do
-                                   oid <- G.reflogEntryIdOld entry
-                                   commitE <- try $ G.commitLookup repo oid
-                                   case commitE of
-                                     Left (G.Libgit2Exception _ _) -> pure $ Left CommitNotFound
-                                     Right _commit -> pure $ Right (oid, extractAction message)
-                                 else loop reflog maxIndex (index + 1) (ignoreStackCounter - 1)
-            else pure $ Left NotOurAction
+type Result = (Either UndoFailure (G.OID, String))
 
-findCommitToRedoTo :: G.Repository -> IO (Either UndoFailure (G.OID, String))
-findCommitToRedoTo repo = do
+type Loop = G.Reflog -> Int -> Int -> Int -> IO Result
+
+type LoopLogic = G.Repository -> G.ReflogEntry -> String -> Loop -> G.Reflog -> Int -> Int -> Int -> IO Result
+
+undoLoopLogic :: LoopLogic
+undoLoopLogic repo entry message loop reflog maxIndex index ignoreStackCounter
+  | isUndoEntry message = loop reflog maxIndex (index + 1) (ignoreStackCounter + 1)
+  | isRedoEntry message = loop reflog maxIndex (index + 1) (ignoreStackCounter - 1)
+  | ignoreStackCounter == 0 = returnCommitIfExists repo entry (extractAction message)
+  | otherwise = loop reflog maxIndex (index + 1) (ignoreStackCounter - 1)
+
+redoLoopLogic :: LoopLogic
+redoLoopLogic repo entry message loop reflog maxIndex index ignoreStackCounter
+  | isUndoEntry message && ignoreStackCounter == 0 = returnCommitIfExists repo entry (extractUndoAction message)
+  | isUndoEntry message = loop reflog maxIndex (index + 1) (ignoreStackCounter + 1)
+  | isRedoEntry message = loop reflog maxIndex (index + 1) (ignoreStackCounter - 1)
+  | ignoreStackCounter == 0 = pure $ Left UndoNotFound
+  | otherwise = loop reflog maxIndex (index + 1) (ignoreStackCounter - 1)
+
+returnCommitIfExists :: G.Repository -> G.ReflogEntry -> String -> IO Result
+returnCommitIfExists repo entry message = do
+  oid <- G.reflogEntryIdOld entry
+  commitE <- try $ G.commitLookup repo oid
+  case commitE of
+    Left (G.Libgit2Exception _ _) -> pure $ Left CommitNotFound
+    Right _commit                 -> pure $ Right (oid, message)
+
+findCommit :: LoopLogic -> G.Repository -> IO (Either UndoFailure (G.OID, String))
+findCommit loopLogic repo = do
   ref <- G.repositoryHead repo
   refName <- G.referenceName ref
   reflog <- G.reflogRead repo refName
@@ -92,24 +91,11 @@ findCommitToRedoTo repo = do
           entry <- G.reflogEntryByIndex reflog index
           message <- G.reflogEntryMessage entry
           if isOurEntry message
-            then if isUndoEntry message
-                   then if ignoreStackCounter == 0
-                          then do
-                            oid <- G.reflogEntryIdOld entry
-                            commitE <- try $ G.commitLookup repo oid
-                            case commitE of
-                              Left (G.Libgit2Exception _ _) -> pure $ Left CommitNotFound
-                              Right _commit -> pure $ Right (oid, extractUndoAction message)
-                          else loop reflog maxIndex (index + 1) (ignoreStackCounter + 1)
-                   else if isRedoEntry message
-                          then loop reflog maxIndex (index + 1) (ignoreStackCounter - 1)
-                          else if ignoreStackCounter == 0
-                                 then pure $ Left UndoNotFound
-                                 else loop reflog maxIndex (index + 1) (ignoreStackCounter - 1)
+            then loopLogic repo entry message loop reflog maxIndex index ignoreStackCounter
             else pure $ Left NotOurAction
 
 doUndoOrRedo ::
-     (G.Repository -> IO (Either UndoFailure (G.OID, String)))
+     (G.Repository -> IO Result)
   -> String
   -> (String -> ActionSummary String)
   -> (UndoFailure -> ActionFailure)
@@ -125,7 +111,7 @@ doUndoOrRedo findCommitFn prefix summaryCtr failureCtr repo = do
     Left failure -> pure $ Failure $ failureCtr failure
 
 doUndo :: G.Repository -> IO ActionOutcome
-doUndo = doUndoOrRedo findCommitToUndoTo undoPrefix UndoS UndoFailure
+doUndo = doUndoOrRedo (findCommit undoLoopLogic) undoPrefix UndoS UndoFailure
 
 doRedo :: G.Repository -> IO ActionOutcome
-doRedo = doUndoOrRedo findCommitToRedoTo redoPrefix RedoS RedoFailure
+doRedo = doUndoOrRedo (findCommit redoLoopLogic) redoPrefix RedoS RedoFailure
