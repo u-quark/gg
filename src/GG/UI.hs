@@ -131,7 +131,10 @@ handleActionSuccessReload s newPos _summary = do
   (head, headCommit) <- R.readRepoState $ s ^. field @"repository"
   (tailCommits, contCommit') <- R.readNCommits (newPos + 500) headCommit
   moreCommitsState <- mapM R.readCommit (headCommit : tailCommits)
-  pure $ (S.updateRepoState contCommit' head moreCommitsState . S.updateCommitsPos newPos) s
+  pure $
+    (S.updateRepoState contCommit' head moreCommitsState . S.updateCommitsPos newPos .
+     set (field @"notification") Nothing)
+      s
 
 handleActionFailure :: S.State -> A.ActionFailure -> IO S.State
 handleActionFailure s failure = do
@@ -325,6 +328,8 @@ drawNotification =
               withAnimAttr notificationCommitAttr opacity (str commit)
             A.UndoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> undoIcon)
             A.RedoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> redoIcon)
+            A.ReachedTop -> withAnimAttr notificationFailureAttr opacity (str topIcon)
+            A.ReachedBottom -> withAnimAttr notificationFailureAttr opacity (str bottomIcon)
             A.InvalidAction -> withAnimAttr notificationFailureAttr opacity (str noIcon)
       where boomIconMaybe =
               if opacity > 0.6
@@ -675,6 +680,12 @@ undoIcon = "\x21b6"
 
 redoIcon :: String
 redoIcon = "\x21b6"
+
+topIcon :: String
+topIcon = "\x2912"
+
+bottomIcon :: String
+bottomIcon = "\x2913"
 
 drawDiffStats :: S.OpenCommit -> Widget S.Name
 drawDiffStats c =

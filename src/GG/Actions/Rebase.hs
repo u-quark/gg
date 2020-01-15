@@ -31,7 +31,7 @@ doRebaseAction repo pos rebaseAction = do
   oids <- traverse G.commitId (headCommit : tailCommits)
   let aM = toRebaseActionPlanner rebaseAction oids pos
   case aM of
-    Just (Plan base commands newPos summary) -> do
+    Right (Plan base commands newPos summary) -> do
       res <- loop base commands
       case res of
         Right oid -> do
@@ -39,7 +39,7 @@ doRebaseAction repo pos rebaseAction = do
           _ <- G.referenceSetTarget ref oid (describeActionSummary summaryStr <> reflogSuffix)
           pure $ Success newPos summaryStr
         Left failure -> pure $ Failure failure
-    Nothing -> pure $ Failure InvalidAction
+    Left failure -> pure $ Failure failure
   where
     loop baseOid [] = pure $ Right baseOid
     loop baseOid (c:cs) = do
@@ -129,7 +129,7 @@ squashCommitInfo MergeAtBottom baseMessage cherryMessage baseAuthor cherryAuthor
            else "")
   pure (mergedMessage, baseAuthor)
 
-type RebaseActionPlanner = [G.OID] -> Int -> Maybe Plan
+type RebaseActionPlanner = [G.OID] -> Int -> Either ActionFailure Plan
 
 toRebaseActionPlanner :: RebaseAction -> RebaseActionPlanner
 toRebaseActionPlanner MoveUpA   = moveUpP
@@ -142,8 +142,8 @@ moveUpP :: RebaseActionPlanner
 moveUpP commitOIDs pos =
   case pos of
     x
-      | x >= 1 -> Just $ Plan base (reverse $ theRest <> lastTwo) (pos - 1) (MoveUpS (commitOIDs !! pos) base)
-    _ -> Nothing
+      | x >= 1 -> Right $ Plan base (reverse $ theRest <> lastTwo) (pos - 1) (MoveUpS (commitOIDs !! pos) base)
+    _ -> Left ReachedTop
   where
     base = commitOIDs !! (pos + 1)
     lastTwo = [ApplyC $ commitOIDs !! pos, ApplyC $ commitOIDs !! (pos - 1)]
@@ -154,8 +154,8 @@ moveDownP commitOIDs pos =
   case pos of
     x
       | x < length commitOIDs ->
-        Just $ Plan base (reverse $ theRest <> lastTwo) (pos + 1) (MoveDownS (commitOIDs !! (pos + 1)) base)
-    _ -> Nothing
+        Right $ Plan base (reverse $ theRest <> lastTwo) (pos + 1) (MoveDownS (commitOIDs !! (pos + 1)) base)
+    _ -> Left ReachedBottom
   where
     base = commitOIDs !! (pos + 2)
     lastTwo = [ApplyC $ commitOIDs !! (pos + 1), ApplyC $ commitOIDs !! pos]
@@ -165,8 +165,8 @@ _squashP :: MessageSquashStrategy -> (G.OID -> G.OID -> ActionSummary G.OID) -> 
 _squashP mss summary commitOIDs pos =
   case pos of
     x
-      | x < length commitOIDs -> Just $ Plan base (reverse $ theRest <> lastTwo) pos (summary (commitOIDs !! pos) base)
-    _ -> Nothing
+      | x < length commitOIDs -> Right $ Plan base (reverse $ theRest <> lastTwo) pos (summary (commitOIDs !! pos) base)
+    _ -> Left ReachedBottom
   where
     base = commitOIDs !! (pos + 2)
     lastTwo = [SquashC (commitOIDs !! pos) mss, ApplyC $ commitOIDs !! (pos + 1)]
@@ -182,8 +182,8 @@ deleteP :: RebaseActionPlanner
 deleteP commitOIDs pos =
   case pos of
     x
-      | x < length commitOIDs -> Just $ Plan base (reverse theRest) pos (DeleteS (commitOIDs !! pos))
-    _ -> Nothing
+      | x < length commitOIDs -> Right $ Plan base (reverse theRest) pos (DeleteS (commitOIDs !! pos))
+    _ -> Left InvalidAction
   where
     base = commitOIDs !! (pos + 1)
     theRest = [ApplyC c | c <- take pos commitOIDs]

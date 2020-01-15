@@ -85,6 +85,8 @@ data ActionFailure
   | RebaseMergeCommit String
   | UndoFailure UndoFailure
   | RedoFailure UndoFailure
+  | ReachedTop
+  | ReachedBottom
 
 data UndoFailure
   = NoActionsFound
