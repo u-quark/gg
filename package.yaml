@@ -49,11 +49,13 @@ library:
   exposed-modules:
     - Lib
     - GG.Actions.Common
+    - GG.Actions.Rebase
     - GG.Actions.Undo
-    - GG.State
-    - GG.UI
+    - GG.Actions
     - GG.Repo
+    - GG.State
     - GG.Timers
+    - GG.UI
     - Libgit2.Types   # XXX order matters here: we need Libgit2/Types.chi to be produced first
     - Libgit2.OID
     - Libgit2

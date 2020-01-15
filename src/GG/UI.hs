@@ -40,7 +40,7 @@ import           Data.String.Utils      (replace)
 import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime, zonedTimeToLocalTime,
                                          zonedTimeZone)
-import qualified GG.Actions.Common      as A
+import qualified GG.Actions             as A
 import qualified GG.Repo                as R
 import qualified GG.State               as S
 import           GG.Timers              (AnimationCb, AnimationEndCb, Duration,
@@ -70,13 +70,13 @@ handleEvent :: S.State -> BrickEvent S.Name S.Event -> EventM S.Name (Next S.Sta
 handleEvent s (VtyEvent (V.EvKey (V.KChar 'q') [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = closeAction s
 handleEvent s (VtyEvent (V.EvKey V.KEnter [])) = openCommitAction s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doRebaseAction R.MoveUpA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doRebaseAction R.MoveDownA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'S') [])) = doRebaseAction R.SquashA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doRebaseAction R.FixupA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'D') [])) = doRebaseAction R.DeleteA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'Z') [])) = doAction R.UndoA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'R') [])) = doAction R.RedoA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doRebaseAction A.MoveUpA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doRebaseAction A.MoveDownA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'S') [])) = doRebaseAction A.SquashA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doRebaseAction A.FixupA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'D') [])) = doRebaseAction A.DeleteA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'Z') [])) = doAction A.UndoA s
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'R') [])) = doAction A.RedoA s
 handleEvent s (VtyEvent ev) = handleScrolling s ev
 handleEvent s (AppEvent S.Tick) = tickEventHandler (s ^. field @"timers") s
 handleEvent s _ = continue s
@@ -144,22 +144,22 @@ handleActionFailure s failure = do
     notificationAnimationEnd
   pure s'
 
-handleAction :: S.State -> R.Action -> IO S.State
+handleAction :: S.State -> A.Action -> IO S.State
 handleAction s action = do
-  result <- R.doAction (s ^. field @"repository") action
+  result <- A.doAction (s ^. field @"repository") action
   case result of
-    R.Success newPos summary -> handleActionSuccessReload s newPos summary
-    R.Failure failure        -> handleActionFailure s failure
+    A.Success newPos summary -> handleActionSuccessReload s newPos summary
+    A.Failure failure        -> handleActionFailure s failure
 
-doAction :: R.Action -> S.State -> EventM S.Name (Next S.State)
+doAction :: A.Action -> S.State -> EventM S.Name (Next S.State)
 doAction action s = do
   s' <- liftIO $ handleAction s action
   continue s'
 
-doRebaseAction :: R.RebaseAction -> S.State -> EventM S.Name (Next S.State)
+doRebaseAction :: A.RebaseAction -> S.State -> EventM S.Name (Next S.State)
 doRebaseAction rebaseAction s = do
   let pos = s ^. field @"commitList" . listSelectedL . to (fromMaybe 0)
-  s' <- liftIO $ handleAction s (R.RebaseAction pos rebaseAction)
+  s' <- liftIO $ handleAction s (A.RebaseAction pos rebaseAction)
   continue s'
 
 failureNotificationDuration :: A.ActionFailure -> Duration

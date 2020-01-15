@@ -23,6 +23,7 @@ module GG.Actions.Common
   ( Action(..)
   , RebaseAction(..)
   , ActionSummary(..)
+  , describeActionSummary
   , ActionOutcome(..)
   , ActionFailure(..)
   , UndoFailure(..)
@@ -57,6 +58,19 @@ data ActionSummary commit
   -- Redo summary
   | RedoS String
   deriving (Functor, Foldable, Traversable)
+
+describeActionSummary :: ActionSummary String -> String
+describeActionSummary (MoveUpS commit aboveCommit) =
+  "Move up commit \"" <> commit <> "\" above commit \"" <> aboveCommit <> "\""
+describeActionSummary (MoveDownS commit belowCommit) =
+  "Move down commit \"" <> commit <> "\" below commit \"" <> belowCommit <> "\""
+describeActionSummary (SquashS commit intoCommit) =
+  "Squash commit \"" <> commit <> "\" into commit \"" <> intoCommit <> "\""
+describeActionSummary (FixupS commit intoCommit) =
+  "Fixup commit \"" <> commit <> "\" into commit \"" <> intoCommit <> "\""
+describeActionSummary (DeleteS commit) = "Delete commit \"" <> commit <> "\""
+describeActionSummary (UndoS summary) = "Undo: " <> summary
+describeActionSummary (RedoS summary) = "Redo: " <> summary
 
 data ActionOutcome
   = Success
