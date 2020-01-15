@@ -29,7 +29,7 @@ import           Control.Lens                 (Traversal', ix, over, set, (&),
 import           Data.Generics.Product.Fields (field)
 import           Data.Time                    (ZonedTime)
 import qualified Data.Vector                  as Vec
-import           GG.Actions.Common             (ActionFailure)
+import           GG.Actions.Common            (ActionFailure)
 import           GG.Timers                    (Timers)
 import           GHC.Generics                 (Generic)
 import qualified Libgit2                      as G
@@ -45,7 +45,7 @@ data Name
   deriving (Eq, Ord, Show)
 
 data TimerName =
-  Notification
+  NotificationT
   deriving (Eq, Ord, Show)
 
 data Commit =
@@ -79,6 +79,9 @@ data OpenCommit =
     }
   deriving (Generic)
 
+data Notification =
+  ActionFailure ActionFailure
+
 data State =
   State
     { commitList   :: L.List Name Commit
@@ -86,7 +89,7 @@ data State =
     , repository   :: G.Repository
     , contCommit   :: G.Commit
     , openCommit   :: Maybe OpenCommit
-    , notification :: Maybe (ActionFailure, Double)
+    , notification :: Maybe (Notification, Double)
     , timers       :: Timers State Name TimerName
     }
   deriving (Generic)

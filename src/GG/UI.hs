@@ -135,10 +135,10 @@ handleActionSuccessReload s newPos _summary = do
 
 handleActionFailure :: S.State -> A.ActionFailure -> IO S.State
 handleActionFailure s failure = do
-  let s' = set (field @"notification") (Just (failure, 1)) s
+  let s' = set (field @"notification") (Just (S.ActionFailure failure, 1)) s
   addAnimation
     (s ^. field @"timers")
-    S.Notification
+    S.NotificationT
     (failureNotificationDuration failure)
     notificationAnimation
     notificationAnimationEnd
@@ -307,23 +307,25 @@ drawStatusBar s =
     (withAttr statusBranchAttr (str ("On " <> s ^. field @"head" . field @"shorthand")) <+> padRight Max (str " ")) <+>
   drawNotification (s ^. field @"notification")
 
-drawNotification :: Maybe (A.ActionFailure, Double) -> Widget S.Name
+drawNotification :: Maybe (S.Notification, Double) -> Widget S.Name
 drawNotification =
   \case
     Nothing -> emptyWidget
     Just (notification, opacity) ->
       case notification of
-        A.RebaseConflict commit baseCommit ->
-          withAnimAttr notificationAttr opacity $ str boomIconMaybe <+> str "Conflicts applying commit " <+>
-          withAnimAttr notificationCommitAttr opacity (str commit) <+>
-          str " on top of commit " <+>
-          withAnimAttr notificationCommitAttr opacity (str baseCommit)
-        A.RebaseMergeCommit commit ->
-          withAnimAttr notificationAttr opacity $ str boomIconMaybe <+> str "Can not apply merge commit " <+>
-          withAnimAttr notificationCommitAttr opacity (str commit)
-        A.UndoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> undoIcon)
-        A.RedoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> redoIcon)
-        A.InvalidAction -> withAnimAttr notificationFailureAttr opacity (str noIcon)
+        S.ActionFailure actionFailure ->
+          case actionFailure of
+            A.RebaseConflict commit baseCommit ->
+              withAnimAttr notificationAttr opacity $ str boomIconMaybe <+> str "Conflicts applying commit " <+>
+              withAnimAttr notificationCommitAttr opacity (str commit) <+>
+              str " on top of commit " <+>
+              withAnimAttr notificationCommitAttr opacity (str baseCommit)
+            A.RebaseMergeCommit commit ->
+              withAnimAttr notificationAttr opacity $ str boomIconMaybe <+> str "Can not apply merge commit " <+>
+              withAnimAttr notificationCommitAttr opacity (str commit)
+            A.UndoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> undoIcon)
+            A.RedoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> redoIcon)
+            A.InvalidAction -> withAnimAttr notificationFailureAttr opacity (str noIcon)
       where boomIconMaybe =
               if opacity > 0.6
                 then boomIcon
