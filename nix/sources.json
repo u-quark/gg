@@ -84,5 +84,18 @@
         "type": "tarball",
         "url": "https://github.com/u-quark/vty/archive/729636962937d6f3ae0979312d902beafa2ee56d.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "yesodweb-authenticate": {
+        "branch": "master",
+        "description": "Authentication methods for Haskell web applications.",
+        "homepage": "",
+        "owner": "yesodweb",
+        "repo": "authenticate",
+        "rev": "authenticate-1.3.5",
+        "sha256": "01mzla0j29pdlcjzf8w843gcz4vsvqd7zswfmny4001vjjgn04xl",
+        "type": "tarball",
+        "url": "https://github.com/yesodweb/authenticate/archive/authenticate-1.3.5.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "version": "authenticate-1.3.5"
     }
 }

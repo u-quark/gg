@@ -32,6 +32,7 @@ dependencies:
 - process
 - bytestring
 - MissingH
+- wreq
 
 library:
   source-dirs: src

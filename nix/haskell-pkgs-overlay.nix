@@ -20,4 +20,8 @@ self: super:
   hslogger = self.hslogger_1_3_1_0;
   microlens-th = self.microlens-th_0_4_3_2;
   regex-compat = self.regex-compat_0_95_2_0;
+  RSA = self.RSA_2_4_1;
+  authenticate-oauth = modifyPkg (callCabal2nix "authenticate-oauth" "${sources.yesodweb-authenticate}/authenticate-oauth" {
+    RSA = self.RSA;
+  });
 }

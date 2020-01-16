@@ -27,6 +27,7 @@ let
   };
   gg = static-haskell.haskellPackagesWithLibsReadyForStaticLinking.callPackage (import ./gg.nix) {
     ncurses = patched-pkgs.pkgsMusl.static-ncurses;
+    zlib = patched-pkgs.pkgsMusl.zlib;
   };
 in
 {

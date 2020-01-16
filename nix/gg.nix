@@ -16,10 +16,12 @@
   process,
   bytestring,
   MissingH,
+  wreq,
   # C deps
   libgit2,
   # Transitive Haskell C deps
-  ncurses
+  ncurses,
+  zlib
 }:
 
 mkDerivation {
@@ -37,6 +39,7 @@ mkDerivation {
   configureFlags = [
     "--ghc-option=-optl=-static"
     "--ghc-option=-optl=-pthread"
+    "--extra-lib-dirs=${zlib.static}/lib"
   ];
   executableHaskellDepends = [
     # Haskell deps
@@ -51,6 +54,7 @@ mkDerivation {
     process
     bytestring
     MissingH
+    wreq
     # C deps
     libgit2
     # Transitive Haskell C deps
