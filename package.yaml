@@ -46,6 +46,7 @@ library:
     - GG.Actions.Rebase
     - GG.Actions.Undo
     - GG.Actions
+    - GG.Main
     - GG.Repo
     - GG.State
     - GG.Timers
