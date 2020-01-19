@@ -33,6 +33,8 @@ dependencies:
 - bytestring
 - MissingH
 - wreq
+- directory
+- http-client
 
 library:
   source-dirs: src

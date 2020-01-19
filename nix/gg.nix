@@ -8,6 +8,8 @@
   base,
   containers,
   time,
+  directory,
+  http-client,
   brick,
   vty,
   lens,
@@ -46,6 +48,8 @@ mkDerivation {
     base
     containers
     time
+    directory
+    http-client
     brick
     vty
     lens
