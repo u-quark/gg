@@ -177,11 +177,18 @@ module Libgit2.Types
   , withReflog
   , ReflogEntry(..)
   , withReflogEntry
+  , Buf(..)
+  , withBuf
+  , newBuf
+  , marshalBuf2ByteString
 )
 
 where
 
-import Foreign (Ptr, nullPtr, Storable, peek, newForeignPtr, newForeignPtr_, peekByteOff, finalizerFree)
+import Foreign
+  ( Ptr, nullPtr, Storable, peek, newForeignPtr, newForeignPtr_, peekByteOff, finalizerFree, mallocForeignPtr,
+    withForeignPtr
+  )
 import Foreign.C (peekCString, peekCStringLen, CUInt, CLong, castCCharToChar, CString, withCString)
 import Data.Bits (Bits)
 import Data.Time.LocalTime (ZonedTime, minutesToTimeZone, utcToZonedTime)
@@ -204,6 +211,7 @@ import Libgit2.Utils (peekNew)
 #include <git2/merge.h>
 #include <git2/sys/merge.h>
 #include <git2/reflog.h>
+#include <git2/buffer.h>
 
 {#context lib="git2" prefix="git_"#}
 
@@ -673,3 +681,31 @@ peekNewReflog :: Ptr (Ptr Reflog) -> IO Reflog
 peekNewReflog = peekNew Reflog reflogFree
 
 {#pointer *reflog_entry as ReflogEntry foreign newtype#}
+
+{#pointer *buf as Buf foreign newtype#}
+
+instance Storable Buf where
+  sizeOf _ = {#sizeof buf#}
+  alignment _ = {#alignof buf#}
+  peek = error "Can't peek Buf"
+  poke = error "Can't poke Buf"
+
+newBuf :: IO Buf
+newBuf = do
+    fp <- mallocForeignPtr
+    withForeignPtr fp $ \p -> do
+      {#set buf->ptr #} p nullPtr
+      {#set buf->size #} p 0
+      {#set buf->asize #} p 0
+    pure $ Buf fp
+
+{#fun buf_dispose as bufDispose { `Buf' } -> `()' #}
+
+marshalBuf2ByteString :: Buf -> IO ByteString
+marshalBuf2ByteString (Buf fp) =
+  withForeignPtr fp (\p -> do
+    str_p <- {#get buf->ptr #} p
+    str_len <- fromIntegral <$> {#get buf->size #} p
+    bs <- packCStringLen (str_p, str_len)
+    bufDispose (Buf fp)
+    pure bs)

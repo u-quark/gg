@@ -29,7 +29,7 @@ import           Control.Lens                 (Traversal', ix, over, set, (&),
 import           Data.Generics.Product.Fields (field)
 import           Data.Time                    (ZonedTime)
 import qualified Data.Vector                  as Vec
-import           GG.Actions.Common            (ActionFailure)
+import           GG.Actions.Common            (ActionFailure, ActionWarning)
 import           GG.Timers                    (Timers)
 import           GHC.Generics                 (Generic)
 import qualified Libgit2                      as G
@@ -79,8 +79,9 @@ data OpenCommit =
     }
   deriving (Generic)
 
-data Notification =
-  ActionFailure ActionFailure
+data Notification
+  = ActionFailure ActionFailure
+  | ActionWarning ActionWarning
 
 data State =
   State

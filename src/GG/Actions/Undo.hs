@@ -107,7 +107,7 @@ doUndoOrRedo findCommitFn prefix summaryCtr failureCtr repo = do
   case oidE of
     Right (oid, summary) -> do
       _ <- G.referenceSetTarget ref oid (prefix <> summary <> reflogSuffix)
-      pure $ Success 0 $ summaryCtr summary
+      pure $ Success 0 (summaryCtr summary) Nothing
     Left failure -> pure $ Failure $ failureCtr failure
 
 doUndo :: G.Repository -> IO ActionOutcome

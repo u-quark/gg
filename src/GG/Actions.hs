@@ -21,6 +21,7 @@ module GG.Actions
   , ActionSummary(..)
   , ActionOutcome(..)
   , ActionFailure(..)
+  , ActionWarning(..)
   , UndoFailure(..)
   , doAction
   ) where

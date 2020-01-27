@@ -22,11 +22,13 @@ module GG.Repo
   , readCommit
   , readCommitDiff
   , refToCommit
+  , module GG.Repo.Commit
   ) where
 
-import           Data.Maybe (fromJust)
-import qualified GG.State   as S
-import qualified Libgit2    as G
+import           Data.Maybe     (fromJust)
+import           GG.Repo.Commit
+import qualified GG.State       as S
+import qualified Libgit2        as G
 
 readCommit :: G.Commit -> IO S.Commit
 readCommit commit = do

@@ -25,6 +25,11 @@ module GG.Repo.Config
   , withCfg
   , getCfg
   , getCfgM
+  , commitGpgSign
+  , gpgProgram
+  , gpgFormat
+  , gpgOpenpgpProgram
+  , userSigningKey
   ) where
 
 import           Control.Exception (catch)
@@ -87,3 +92,18 @@ instance CfgValue String where
 instance CfgValue Int where
   getCfg = getCfg_ G.configGetInt64 fromIntegral
   getCfgM = getCfgM_ G.configGetInt64 fromIntegral
+
+commitGpgSign :: CfgEntry Bool
+commitGpgSign = CfgGit "commit" "gpgsign" False
+
+gpgProgram :: CfgEntry String
+gpgProgram = CfgGit "gpg" "program" "gpg"
+
+gpgFormat :: CfgEntry String
+gpgFormat = CfgGit "gpg" "format" "openpgp"
+
+gpgOpenpgpProgram :: CfgEntryM String
+gpgOpenpgpProgram = CfgGitM "gpg" "openpgp.program"
+
+userSigningKey :: CfgEntryM String
+userSigningKey = CfgGitM "user" "signingKey"

@@ -147,12 +147,27 @@ handleActionFailure s failure = do
     notificationAnimationEnd
   pure s'
 
+handleActionWarning :: S.State -> A.ActionWarning -> IO S.State
+handleActionWarning s warning = do
+  let s' = set (field @"notification") (Just (S.ActionWarning warning, 1)) s
+  addAnimation
+    (s ^. field @"timers")
+    S.NotificationT
+    (warningNotificationDuration warning)
+    notificationAnimation
+    notificationAnimationEnd
+  pure s'
+
 handleAction :: S.State -> A.Action -> IO S.State
 handleAction s action = do
   result <- A.doAction (s ^. field @"repository") action
   case result of
-    A.Success newPos summary -> handleActionSuccessReload s newPos summary
-    A.Failure failure        -> handleActionFailure s failure
+    A.Success newPos summary maybeWarning -> do
+      s' <- handleActionSuccessReload s newPos summary
+      case maybeWarning of
+        Nothing      -> pure s'
+        Just warning -> handleActionWarning s' warning
+    A.Failure failure -> handleActionFailure s failure
 
 doAction :: A.Action -> S.State -> EventM S.Name (Next S.State)
 doAction action s = do
@@ -168,7 +183,11 @@ doRebaseAction rebaseAction s = do
 failureNotificationDuration :: A.ActionFailure -> Duration
 failureNotificationDuration (A.RebaseConflict _ _)  = 5
 failureNotificationDuration (A.RebaseMergeCommit _) = 5
+failureNotificationDuration (A.GPGError _ _)        = 5
 failureNotificationDuration _                       = 2
+
+warningNotificationDuration :: A.ActionWarning -> Duration
+warningNotificationDuration A.X509SigningNotSupported = 5
 
 notificationAnimation :: AnimationCb S.State S.Name
 notificationAnimation t s = do
@@ -201,8 +220,8 @@ statusBranchAttr = statusBarAttr <> "status_branch"
 notificationAttr :: AttrName
 notificationAttr = "notification"
 
-notificationCommitAttr :: AttrName
-notificationCommitAttr = notificationAttr <> "commit"
+notificationEmphasisAttr :: AttrName
+notificationEmphasisAttr = notificationAttr <> "emphasis"
 
 notificationFailureAttr :: AttrName
 notificationFailureAttr = notificationAttr <> "failure"
@@ -319,21 +338,32 @@ drawNotification =
         S.ActionFailure actionFailure ->
           case actionFailure of
             A.RebaseConflict commit baseCommit ->
-              withAnimAttr notificationAttr opacity $ str boomIconMaybe <+> str "Conflicts applying commit " <+>
-              withAnimAttr notificationCommitAttr opacity (str commit) <+>
+              withAnimAttr notificationAttr opacity $ str (iconMaybe boomIcon) <+> str "Conflicts applying commit " <+>
+              withAnimAttr notificationEmphasisAttr opacity (str commit) <+>
               str " on top of commit " <+>
-              withAnimAttr notificationCommitAttr opacity (str baseCommit)
+              withAnimAttr notificationEmphasisAttr opacity (str baseCommit)
             A.RebaseMergeCommit commit ->
-              withAnimAttr notificationAttr opacity $ str boomIconMaybe <+> str "Can not apply merge commit " <+>
-              withAnimAttr notificationCommitAttr opacity (str commit)
+              withAnimAttr notificationAttr opacity $ str (iconMaybe boomIcon) <+> str "Can not apply merge commit " <+>
+              withAnimAttr notificationEmphasisAttr opacity (str commit)
+            A.GPGError code errorMsg ->
+              withAnimAttr notificationAttr opacity $ str (iconMaybe errorIcon) <+> str " GPG error: [" <+>
+              withAnimAttr notificationEmphasisAttr opacity (str (show code)) <+>
+              str "] " <+>
+              withAnimAttr notificationEmphasisAttr opacity (str $ replace "\n" " " errorMsg)
             A.UndoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> undoIcon)
             A.RedoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> redoIcon)
             A.ReachedTop -> withAnimAttr notificationFailureAttr opacity (str topIcon)
             A.ReachedBottom -> withAnimAttr notificationFailureAttr opacity (str bottomIcon)
             A.InvalidAction -> withAnimAttr notificationFailureAttr opacity (str noIcon)
-      where boomIconMaybe =
+        S.ActionWarning actionWarning ->
+          case actionWarning of
+            A.X509SigningNotSupported ->
+              withAnimAttr notificationAttr opacity $ str (iconMaybe warningIcon) <+>
+              str " Commit Singing with X509 is not supported. Disable with " <+>
+              withAnimAttr notificationEmphasisAttr opacity (str "gg-gpg.format = false")
+      where iconMaybe icon =
               if opacity > 0.6
-                then boomIcon
+                then icon
                 else ""
 
 openCommitAction :: S.State -> EventM S.Name (Next S.State)
@@ -687,6 +717,12 @@ topIcon = "\x2912"
 bottomIcon :: String
 bottomIcon = "\x2913"
 
+warningIcon :: String
+warningIcon = "\x26A0\xFE0F "
+
+errorIcon :: String
+errorIcon = "\x26D4"
+
 drawDiffStats :: S.OpenCommit -> Widget S.Name
 drawDiffStats c =
   foldr1
@@ -813,7 +849,7 @@ withAnimAttr :: AttrName -> Double -> Widget S.Name -> Widget S.Name
 withAnimAttr attr
   | attr == notificationAttr = withBlendFgColor (base03 `on` base2) base03 base2
 withAnimAttr attr
-  | attr == notificationCommitAttr = withBlendFgColor (base03 `on` base2 `V.withStyle` V.bold) base03 base2
+  | attr == notificationEmphasisAttr = withBlendFgColor (base03 `on` base2 `V.withStyle` V.bold) base03 base2
 withAnimAttr attr
   | attr == notificationFailureAttr = withBlendFgColor (red `on` base2) red base2
 withAnimAttr attr = \_a -> withAttr attr

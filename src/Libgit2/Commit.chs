@@ -30,6 +30,8 @@ module Libgit2.Commit
   , commitParents
   , commitTree
   , commitCreate
+  , commitCreateBuffer
+  , commitCreateWithSignature
   ) where
 
 {#import Libgit2.Types#}
@@ -38,6 +40,7 @@ module Libgit2.Commit
 import Foreign (alloca, Ptr)
 import Foreign.C (CString)
 import Data.Time.LocalTime (ZonedTime)
+import Data.ByteString (ByteString, useAsCString)
 import Libgit2.Errors (checkReturnCode)
 import Libgit2.Utils (defaultPeekCString, errorPeekCString, maybeWithCString, withManyArray)
 
@@ -100,4 +103,20 @@ commitCreate :: Repository -> Maybe String -> Signature -> Signature -> String -
 commitCreate repository update_ref author committer message_encoding message tree parents = do
   oid <- newOID
   _commitCreate oid repository update_ref author committer message_encoding message tree (length parents) parents
+  pure oid
+
+{#fun commit_create_buffer as _commitCreateBuffer { `Buf', `Repository', `Signature', `Signature', `String', `String', `Tree', `Int', withArrayCommit* `[Commit]' } -> `Int' checkReturnCode*-#}
+
+commitCreateBuffer :: Repository -> Signature -> Signature -> String -> String -> Tree -> [Commit] -> IO ByteString
+commitCreateBuffer repository author committer message_encoding message tree parents = do
+  buf <- newBuf
+  _commitCreateBuffer buf repository author committer message_encoding message tree (length parents) parents
+  marshalBuf2ByteString buf
+
+{#fun git_commit_create_with_signature as _commitCreateWithSignature { `OID', `Repository', useAsCString* `ByteString', maybeWithCString* `Maybe String', maybeWithCString* `Maybe String' } -> `Int' checkReturnCode*-#}
+
+commitCreateWithSignature :: Repository -> ByteString -> Maybe String -> Maybe String -> IO OID
+commitCreateWithSignature repository commitContent signature signatureField = do
+  oid <- newOID
+  _commitCreateWithSignature oid repository commitContent signature signatureField
   pure oid

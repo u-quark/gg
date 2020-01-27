@@ -25,6 +25,7 @@ module GG.Actions.Common
   , ActionSummary(..)
   , describeActionSummary
   , ActionOutcome(..)
+  , ActionWarning(..)
   , ActionFailure(..)
   , UndoFailure(..)
   , reflogSuffix
@@ -76,13 +77,18 @@ data ActionOutcome
   = Success
       { newCursorPosition :: Int
       , actionSummary     :: ActionSummary String
+      , actionWarning     :: Maybe ActionWarning
       }
   | Failure ActionFailure
+
+data ActionWarning =
+  X509SigningNotSupported
 
 data ActionFailure
   = InvalidAction
   | RebaseConflict String String
   | RebaseMergeCommit String
+  | GPGError Int String
   | UndoFailure UndoFailure
   | RedoFailure UndoFailure
   | ReachedTop

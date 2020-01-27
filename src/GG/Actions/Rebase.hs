@@ -20,33 +20,34 @@ module GG.Actions.Rebase
   ) where
 
 import           GG.Actions.Common
-import           GG.Repo           (readNCommits, refToCommit)
+import qualified GG.Repo           as R
 import qualified Libgit2           as G
 
 doRebaseAction :: G.Repository -> Int -> RebaseAction -> IO ActionOutcome
 doRebaseAction repo pos rebaseAction = do
   ref <- G.repositoryHead repo
-  headCommit <- refToCommit repo ref
-  (tailCommits, _) <- readNCommits (pos + 3) headCommit
+  headCommit <- R.refToCommit repo ref
+  (tailCommits, _) <- R.readNCommits (pos + 3) headCommit
   oids <- traverse G.commitId (headCommit : tailCommits)
   let aM = toRebaseActionPlanner rebaseAction oids pos
   case aM of
     Right (Plan base commands newPos summary) -> do
-      res <- loop base commands
+      res <- loop base commands Nothing
       case res of
-        Right oid -> do
+        Right (oid, maybeWarning) -> do
           summaryStr <- traverse (oidToCommitMessage repo) summary
           _ <- G.referenceSetTarget ref oid (describeActionSummary summaryStr <> reflogSuffix)
-          pure $ Success newPos summaryStr
+          pure $ Success newPos summaryStr maybeWarning
         Left failure -> pure $ Failure failure
     Left failure -> pure $ Failure failure
   where
-    loop baseOid [] = pure $ Right baseOid
-    loop baseOid (c:cs) = do
+    loop baseOid [] maybeWarning = pure $ Right (baseOid, maybeWarning)
+    loop baseOid (c:cs) maybeWarning = do
       res <- doCommand c repo baseOid
       case res of
-        Right newBaseOid -> loop newBaseOid cs
-        Left _           -> pure res
+        Right (newBaseOid, Just warning) -> loop newBaseOid cs (Just warning)
+        Right (newBaseOid, _)            -> loop newBaseOid cs maybeWarning
+        Left _                           -> pure res
     oidToCommitMessage repository oid = do
       commit <- G.commitLookup repository oid
       G.commitSummary commit
@@ -66,7 +67,7 @@ data MessageSquashStrategy
   = KeepBase
   | MergeAtBottom
 
-doCommand :: Command -> G.Repository -> G.OID -> IO (Either ActionFailure G.OID)
+doCommand :: Command -> G.Repository -> G.OID -> IO (Either ActionFailure (G.OID, Maybe ActionWarning))
 doCommand (ApplyC oid) repo baseOid = doCommand_ repo oid baseOid getMessageAndAuthor False
   where
     getMessageAndAuthor _baseMessage cherryMessage _baseAuthor cherryAuthor = pure (cherryMessage, cherryAuthor)
@@ -79,7 +80,7 @@ doCommand_ ::
   -> G.OID
   -> (String -> String -> G.Signature -> G.Signature -> IO (String, G.Signature))
   -> Bool
-  -> IO (Either ActionFailure G.OID)
+  -> IO (Either ActionFailure (G.OID, Maybe ActionWarning))
 doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
   commit <- G.commitLookup repo oid
   parentCount <- G.commitParentCount commit
@@ -104,7 +105,6 @@ doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
           baseMessage <- G.commitMessage baseCommit
           baseAuthor <- G.commitAuthor baseCommit
           (message, author) <- getMessageAndAuthor baseMessage cherryMessage baseAuthor cherryAuthor
-          committer <- G.signatureDefault repo
           newTreeOid <- G.indexWriteTreeTo index repo
           newTree <- G.treeLookup repo newTreeOid
           baseCommitParents <- G.commitParents baseCommit
@@ -112,8 +112,11 @@ doCommand_ repo oid baseOid getMessageAndAuthor isSquash = do
                 if isSquash
                   then baseCommitParents
                   else [baseCommit]
-          newCommitOid <- G.commitCreate repo Nothing author committer "UTF-8" message newTree newParents
-          pure $ Right newCommitOid
+          createCommitResult <- R.createCommit repo author message newTree newParents
+          case createCommitResult of
+            R.Success newCommitOid -> pure $ Right (newCommitOid, Nothing)
+            R.WarningX509SigningNotSupported newCommitOid -> pure $ Right (newCommitOid, Just X509SigningNotSupported)
+            R.GPGError code errorMsg -> pure $ Left $ GPGError code errorMsg
 
 squashCommitInfo :: MessageSquashStrategy -> String -> String -> G.Signature -> G.Signature -> IO (String, G.Signature)
 squashCommitInfo KeepBase baseMessage _cherryMessage baseAuthor _cherryAuthor = pure (baseMessage, baseAuthor)
