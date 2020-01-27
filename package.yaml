@@ -50,6 +50,7 @@ library:
     - GG.Actions
     - GG.Main
     - GG.Repo
+    - GG.Repo.Config
     - GG.State
     - GG.Timers
     - GG.UI

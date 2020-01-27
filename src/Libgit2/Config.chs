@@ -18,12 +18,18 @@
 module Libgit2.Config
   ( configOpenDefault
   , configOpenLevel
+  , configGetString
+  , configGetBool
+  , configGetInt32
+  , configGetInt64
   ) where
 
 {#import Libgit2.Types#}
 
 import Foreign (alloca)
+import Data.Int (Int32, Int64)
 import Libgit2.Errors (checkReturnCode)
+import Libgit2.Utils (peekCBool, peekCInt, peekCLong, peekPeekCString)
 
 #include "git2/config.h"
 
@@ -32,3 +38,11 @@ import Libgit2.Errors (checkReturnCode)
 {#fun config_open_default as configOpenDefault { alloca- `Config' peekNewConfig* } -> `Int' checkReturnCode*-#}
 
 {#fun config_open_level as configOpenLevel { alloca- `Config' peekNewConfig*, `Config', `ConfigLevel' } -> `Int' checkReturnCode*-#}
+
+{#fun config_get_string as configGetString { alloca- `String' peekPeekCString*, `Config', `String' } -> `Int' checkReturnCode*-#}
+
+{#fun config_get_bool as configGetBool { alloca- `Bool' peekCBool*, `Config', `String' } -> `Int' checkReturnCode*-#}
+
+{#fun config_get_int32 as configGetInt32 { alloca- `Int32' peekCInt*, `Config', `String' } -> `Int' checkReturnCode*-#}
+
+{#fun config_get_int64 as configGetInt64 { alloca- `Int64' peekCLong*, `Config', `String' } -> `Int' checkReturnCode*-#}

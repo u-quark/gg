@@ -21,6 +21,10 @@ module Libgit2.Utils
   ( peekNew
   , peekF
   , peekFCString
+  , peekCBool
+  , peekCInt
+  , peekCLong
+  , peekPeekCString
   , errorNullPeek
   , defaultNullPeek
   , errorPeekCString
@@ -40,13 +44,14 @@ module Libgit2.Utils
   , alterAList
   ) where
 
-import           Control.Monad (when)
+import           Control.Monad (when, (<=<))
+import           Data.Int      (Int32, Int64)
 import           Data.Maybe    (maybeToList)
 import           Foreign       (FinalizerPtr, ForeignPtr, FunPtr, Ptr, Storable,
                                 free, freeHaskellFunPtr, malloc, maybeWith,
                                 newForeignPtr, nullFunPtr, nullPtr, peek,
                                 withArray, withForeignPtr, withMany)
-import           Foreign.C     (CString, peekCString, withCString)
+import           Foreign.C     (CInt, CLong, CString, peekCString, withCString)
 
 peekNew :: (ForeignPtr a -> b) -> FinalizerPtr a -> Ptr (Ptr a) -> IO b
 peekNew haskellConstructor cFinalizer ptr = do
@@ -74,6 +79,20 @@ defaultPeekCString = defaultNullPeek peekCString
 
 maybeWithCString :: Maybe String -> (CString -> IO ()) -> IO ()
 maybeWithCString = maybeWith withCString
+
+peekCBool :: Ptr CInt -> IO Bool
+peekCBool bp = do
+  b <- peek bp
+  pure $ b /= 0
+
+peekCInt :: Ptr CInt -> IO Int32
+peekCInt = fmap fromIntegral <$> peek
+
+peekCLong :: Ptr CLong -> IO Int64
+peekCLong = fmap fromIntegral <$> peek
+
+peekPeekCString :: Ptr CString -> IO String
+peekPeekCString = peekCString <=< peek
 
 peekF :: (Ptr a -> IO b) -> Ptr a -> IO b
 peekF peekFn p = do

@@ -27,6 +27,8 @@ module Libgit2.Repository
   , repositoryOpenNoDotgit
   , repositoryOpenFromEnv
   , repositoryHead
+  , repositoryConfig
+  , repositoryConfigSnapshot
   ) where
 
 {#import Libgit2.Types#}
@@ -68,3 +70,7 @@ repositoryOpenFromEnv = fromOpenEnum InternalOpenFromEnv
 {#fun repository_open_ext as repositoryOpenExt { alloca- `Repository' peekNewRepository*, `String', fromRepositoryOpenFlags `RepositoryOpenFlags', `String' } -> `Int' checkReturnCode*-#}
 
 {#fun repository_head as repositoryHead { alloca- `Reference' peekNewReference*, `Repository' } -> `Int' checkReturnCode*-#}
+
+{#fun repository_config as repositoryConfig { alloca- `Config' peekNewConfig*, `Repository' } -> `Int' checkReturnCode*-#}
+
+{#fun repository_config_snapshot as repositoryConfigSnapshot { alloca- `Config' peekNewConfig*, `Repository' } -> `Int' checkReturnCode*-#}
