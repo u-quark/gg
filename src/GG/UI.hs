@@ -30,8 +30,9 @@ import           Brick.BChan            (BChan)
 import           Brick.Widgets.List
 import           Control.Lens           (element, mapMOf, mapped, set, to, (^.),
                                          (^?), (^?!), _2)
-import           Control.Monad          (void, when)
+import           Control.Monad          (foldM, void, when)
 import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Reader   (Reader, runReader)
 import           Data.Bits              (Bits, zeroBits, (.&.))
 import           Data.Generics.Product  (field)
 import           Data.List              (intercalate)
@@ -41,6 +42,7 @@ import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime, zonedTimeToLocalTime,
                                          zonedTimeZone)
 import qualified GG.Actions             as A
+import           GG.Env                 (Env (..))
 import qualified GG.Repo                as R
 import qualified GG.State               as S
 import           GG.Timers              (AnimationCb, AnimationEndCb, Duration,
@@ -49,6 +51,8 @@ import qualified Graphics.Vty           as V
 import qualified Libgit2                as G
 import           Prelude                hiding (head)
 import           System.Environment     (lookupEnv, setEnv)
+
+type UI = Reader Env (Widget S.Name)
 
 app :: App S.State S.Event S.Name
 app =
@@ -295,8 +299,9 @@ formatOid = take 8 . show
 fillLine :: AttrName -> Widget S.Name -> Widget S.Name
 fillLine attr line = withAttr attr $ padRight Max line
 
-drawCommit :: Bool -> S.Commit -> Widget S.Name
+drawCommit :: Bool -> S.Commit -> UI
 drawCommit _selected c =
+  pure $
   foldr1
     (<+>)
     [ withAttr oidAttr (str $ formatOid (c ^. field @"oid"))
@@ -312,28 +317,35 @@ drawCommit _selected c =
     ]
 
 drawUI :: S.State -> [Widget S.Name]
-drawUI s = [ui]
+drawUI s = [runReader ui env]
   where
-    ui =
-      foldr1
-        (<=>)
-        [ padBottom Max (renderList drawCommit True (s ^. field @"commitList"))
-        , maybe emptyWidget (withAttr defaultAttr . padBottom Max . drawOpenCommit) (s ^. field @"openCommit")
-        , drawStatusBar s
-        ]
+    env = s ^. field @"env"
+    ui = do
+      statusBarUI <- drawStatusBar s
+      openCommitUI <-
+        maybe
+          (pure emptyWidget)
+          (fmap (withAttr defaultAttr . padBottom Max) . drawOpenCommit)
+          (s ^. field @"openCommit")
+      let commitRenderer isSelected commit = flip runReader env $ drawCommit isSelected commit
+      let commitListUI = padBottom Max (renderList commitRenderer True (s ^. field @"commitList"))
+      pure $ foldr1 (<=>) [commitListUI, openCommitUI, statusBarUI]
 
-drawStatusBar :: S.State -> Widget S.Name
-drawStatusBar s =
-  withAttr
-    statusBarAttr
-    (withAttr statusBranchAttr (str ("On " <> s ^. field @"head" . field @"shorthand")) <+> padRight Max (str " ")) <+>
-  drawNotification (s ^. field @"notification")
+drawStatusBar :: S.State -> UI
+drawStatusBar s = do
+  notificationUI <- drawNotification (s ^. field @"notification")
+  pure $
+    withAttr
+      statusBarAttr
+      (withAttr statusBranchAttr (str ("On " <> s ^. field @"head" . field @"shorthand")) <+> padRight Max (str " ")) <+>
+    notificationUI
 
-drawNotification :: Maybe (S.Notification, Double) -> Widget S.Name
+drawNotification :: Maybe (S.Notification, Double) -> UI
 drawNotification =
   \case
-    Nothing -> emptyWidget
+    Nothing -> pure emptyWidget
     Just (notification, opacity) ->
+      pure $
       case notification of
         S.ActionFailure actionFailure ->
           case actionFailure of
@@ -378,8 +390,8 @@ openCommitAction s = do
       (diffStats, diffInfo_) <- R.readCommitDiff (s ^. field @"repository") (s ^?! (S.commitL ix . field @"oid"))
       pure $ S.openCommitDetails ix (diffStats, diffInfo_) s
 
-drawSignatures :: S.Commit -> Widget S.Name
-drawSignatures c = foldr1 (<=>) cases
+drawSignatures :: S.Commit -> UI
+drawSignatures c = pure $ foldr1 (<=>) cases
   where
     authorName = c ^. field @"authorName"
     authorEmail = c ^. field @"authorEmail"
@@ -424,11 +436,14 @@ drawSignatures c = foldr1 (<=>) cases
           ]
       | otherwise = error "Unreachable code!"
 
-drawDiff :: G.DiffInfo -> Widget S.Name
+drawDiff :: G.DiffInfo -> UI
 drawDiff diffInfo =
-  foldr1 (<=>) $
-  map
-    (\(diffDelta, deltaInfo) -> fillLine defaultAttr (str " ") <=> drawDelta diffDelta <=> drawDeltaInfo deltaInfo)
+  foldr1 (<=>) <$>
+  mapM
+    (\(diffDelta, deltaInfo) -> do
+       deltaUI <- drawDelta diffDelta
+       deltaInfoUI <- drawDeltaInfo deltaInfo
+       pure $ fillLine defaultAttr (str " ") <=> deltaUI <=> deltaInfoUI)
     diffInfo
 
 data FileType
@@ -445,13 +460,13 @@ data FileMode
 isFlagSet :: (Bits a) => a -> a -> Bool
 isFlagSet value flag = value .&. flag /= zeroBits
 
-drawDelta :: G.DiffDelta -> Widget S.Name
+drawDelta :: G.DiffDelta -> UI
 drawDelta G.DiffDelta { diffDeltaSimilarity = G.Similarity similarity
                       , diffDeltaOldFile = old
                       , diffDeltaNewFile = new
                       , diffDeltaStatus = deltaType
                       } =
-  fillLine fileDelta $ withAttr attr (str text <+> drawTypeTransition <+> drawModeTransition <+> drawSimilarity)
+  pure $ fillLine fileDelta $ withAttr attr (str text <+> drawTypeTransition <+> drawModeTransition <+> drawSimilarity)
   where
     fileExists file = G.diffFileFlags file `isFlagSet` G.diffExists
     oldExists = fileExists old
@@ -552,9 +567,9 @@ drawDelta G.DiffDelta { diffDeltaSimilarity = G.Similarity similarity
             (fileDeleted, intercalate "" [crossIcon, typeIcon oldType, oldName, modeIcon oldMode])
         _ -> (fileModified, "Unknown file change?!")
 
-drawDeltaInfo :: G.DeltaInfo -> Widget S.Name
+drawDeltaInfo :: G.DeltaInfo -> UI
 drawDeltaInfo (hunkInfos, _diffBinaries) =
-  foldr ((<=>) . drawHunkInfo (oldLineWidth, newLineWidth)) emptyWidget hunkInfos
+  foldM (\ui hunk -> (ui <=>) <$> drawHunkInfo (oldLineWidth, newLineWidth) hunk) emptyWidget hunkInfos
   where
     (oldLineWidth, newLineWidth) =
       foldr
@@ -563,8 +578,8 @@ drawDeltaInfo (hunkInfos, _diffBinaries) =
         (0, 0) $
       concatMap snd hunkInfos
 
-drawHunk :: G.DiffHunk -> Widget S.Name
-drawHunk hunk = cases
+drawHunk :: G.DiffHunk -> UI
+drawHunk hunk = pure cases
   where
     header = G.diffHunkHeader hunk
     strippedHeader = drop k header
@@ -575,14 +590,15 @@ drawHunk hunk = cases
       | strippedHeader /= "" = withAttr diffHeader (str $ "  " <> strippedHeader)
       | otherwise = emptyWidget
 
-drawHunkInfo :: (Int, Int) -> G.HunkInfo -> Widget S.Name
-drawHunkInfo (oldLineWidth, newLineWidth) (hunk, diffLines) =
-  hunkHeaderUI <=> foldr1 (<=>) (map (drawLine (oldLineWidth, newLineWidth)) diffLines)
-  where
-    hunkHeaderUI =
-      fillLine defaultAttr $ withAttr diffLineNumber (str $ center (oldLineWidth + newLineWidth + 1) "...") <+>
-      withAttr diffLineNumberSep (str doubleDividingLine) <+>
-      drawHunk hunk
+drawHunkInfo :: (Int, Int) -> G.HunkInfo -> UI
+drawHunkInfo (oldLineWidth, newLineWidth) (hunk, diffLines) = do
+  hunkUI <- drawHunk hunk
+  let hunkHeaderUI =
+        fillLine defaultAttr $ withAttr diffLineNumber (str $ center (oldLineWidth + newLineWidth + 1) "...") <+>
+        withAttr diffLineNumberSep (str doubleDividingLine) <+>
+        hunkUI
+  linesUI <- mapM (drawLine (oldLineWidth, newLineWidth)) diffLines
+  pure $ hunkHeaderUI <=> foldr1 (<=>) linesUI
 
 pad :: Int -> String -> String
 pad width string = replicate (width - textWidth string) ' ' <> string
@@ -598,8 +614,8 @@ center width string = replicate left ' ' <> string <> replicate right ' '
         else 0
     right = excess `div` 2
 
-drawLine :: (Int, Int) -> G.DiffLine -> Widget S.Name
-drawLine (oldLineWidth, newLineWidth) diffLine = cases
+drawLine :: (Int, Int) -> G.DiffLine -> UI
+drawLine (oldLineWidth, newLineWidth) diffLine = pure cases
   where
     origin = G.diffLineOrigin diffLine
     oldLineNo = G.diffLineOldLineno diffLine
@@ -625,31 +641,33 @@ drawLine (oldLineWidth, newLineWidth) diffLine = cases
         drawLineNos "" "" <+> drawLine' diffDeletedLine (withAttr diffDeletedText (str carriageReturnIcon))
       | otherwise = error "Unknown line origin"
 
-drawOpenCommit :: S.OpenCommit -> Widget S.Name
-drawOpenCommit openCommit =
-  title <=>
-  viewport
-    S.CommitDiffVP
-    Vertical
-    (cached S.CommitDiffUI $
-     foldr1
-       (<=>)
-       [ fillLine defaultAttr $ str " "
-       , fillLine defaultAttr $ str (openCommit ^. (field @"openCommit" . field @"body"))
-       , fillLine defaultAttr $ str " "
-       , drawSignatures (openCommit ^. field @"openCommit")
-       , drawDiff (openCommit ^. field @"diffInfo")
-       ])
-  where
-    title =
-      withAttr commitSummary $
-      foldr1
-        (<+>)
-        [ str (openCommit ^. (field @"openCommit" . field @"summary"))
-        , drawDiffStats openCommit
-        , padRight Max (str " ")
-        , withAttr fullOid $ str $ show (openCommit ^. (field @"openCommit" . field @"oid"))
-        ]
+drawOpenCommit :: S.OpenCommit -> UI
+drawOpenCommit openCommit = do
+  diffUI <- drawDiff (openCommit ^. field @"diffInfo")
+  signaturesUI <- drawSignatures (openCommit ^. field @"openCommit")
+  diffStatsUI <- drawDiffStats openCommit
+  let titleUI =
+        withAttr commitSummary $
+        foldr1
+          (<+>)
+          [ str (openCommit ^. (field @"openCommit" . field @"summary"))
+          , diffStatsUI
+          , padRight Max (str " ")
+          , withAttr fullOid $ str $ show (openCommit ^. (field @"openCommit" . field @"oid"))
+          ]
+  pure $ titleUI <=>
+    viewport
+      S.CommitDiffVP
+      Vertical
+      (cached S.CommitDiffUI $
+       foldr1
+         (<=>)
+         [ fillLine defaultAttr $ str " "
+         , fillLine defaultAttr $ str (openCommit ^. (field @"openCommit" . field @"body"))
+         , fillLine defaultAttr $ str " "
+         , signaturesUI
+         , diffUI
+         ])
 
 editIcon :: String
 editIcon = "\x1F4DD"
@@ -723,8 +741,9 @@ warningIcon = "\x26A0\xFE0F "
 errorIcon :: String
 errorIcon = "\x26D4"
 
-drawDiffStats :: S.OpenCommit -> Widget S.Name
+drawDiffStats :: S.OpenCommit -> UI
 drawDiffStats c =
+  pure $
   foldr1
     (<+>)
     [ str " "

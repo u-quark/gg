@@ -27,6 +27,7 @@ import           Control.Exception     (Handler (..), bracket, catches)
 import           Control.Lens          ((^.))
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy  as LBS
+import           GG.Env                (Env (..))
 import qualified GG.Repo               as R
 import qualified GG.State              as S
 import           GG.Timers             (initTimers)
@@ -58,7 +59,7 @@ openRepoUI = do
   bChan <- newBChan 10
   timers <- initTimers S.Tick 100000 bChan
   commitsState <- mapM R.readCommit (headCommit : tailCommits)
-  UI.main bChan $ S.initState repo contCommit head commitsState timers
+  UI.main bChan $ S.initState (Env {}) repo contCommit head commitsState timers
 
 releaseURL :: String
 releaseURL = "https://github.com/u-quark/gg/releases/download/nightly/gg"

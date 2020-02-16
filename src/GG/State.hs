@@ -30,6 +30,7 @@ import           Data.Generics.Product.Fields (field)
 import           Data.Time                    (ZonedTime)
 import qualified Data.Vector                  as Vec
 import           GG.Actions.Common            (ActionFailure, ActionWarning)
+import           GG.Env                       (Env (..))
 import           GG.Timers                    (Timers)
 import           GHC.Generics                 (Generic)
 import qualified Libgit2                      as G
@@ -85,7 +86,8 @@ data Notification
 
 data State =
   State
-    { commitList   :: L.List Name Commit
+    { env          :: Env
+    , commitList   :: L.List Name Commit
     , head         :: Reference
     , repository   :: G.Repository
     , contCommit   :: G.Commit
@@ -95,9 +97,9 @@ data State =
     }
   deriving (Generic)
 
-initState :: G.Repository -> G.Commit -> Reference -> [Commit] -> Timers State Name TimerName -> State
-initState repo commit head_ l timers_ =
-  State (L.list CommitListUI (Vec.fromList l) 1) head_ repo commit Nothing Nothing timers_
+initState :: Env -> G.Repository -> G.Commit -> Reference -> [Commit] -> Timers State Name TimerName -> State
+initState env_ repo commit head_ l timers_ =
+  State env_ (L.list CommitListUI (Vec.fromList l) 1) head_ repo commit Nothing Nothing timers_
 
 updateRepoState :: G.Commit -> Reference -> [Commit] -> State -> State
 updateRepoState commit head_ l =
