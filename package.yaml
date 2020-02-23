@@ -45,20 +45,7 @@ library:
   extra-libraries:
   - git2
   exposed-modules:
-    - Lib
-    - GG.Actions.Common
-    - GG.Actions.Rebase
-    - GG.Actions.Undo
-    - GG.Actions
     - GG.Main
-    - GG.Repo
-    - GG.Repo.Commit
-    - GG.Repo.Config
-    - GG.State
-    - GG.Timers
-    - GG.UI
-    - GG.Utils
-    - GG.Env
     - Libgit2.Types   # XXX order matters here: we need Libgit2/Types.chi to be produced first
     - Libgit2.OID
     - Libgit2
