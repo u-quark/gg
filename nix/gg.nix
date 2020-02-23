@@ -23,7 +23,9 @@
   libgit2,
   # Transitive Haskell C deps
   ncurses,
-  zlib
+  zlib,
+  # Generated
+  haskell-base16-schemes
 }:
 
 mkDerivation {
@@ -33,6 +35,9 @@ mkDerivation {
     "app" "app/.*" "src" "src/.*" "test" "test/.*"
     "stack.yaml" "package.yaml" "Setup.hs" "LICENSE" "README.md" "ChangeLog.md"
   ];
+  postUnpack = ''
+    cp ${haskell-base16-schemes}/BuiltinColorSchemes.hs gg/src/GG/UI/
+  '';
   isLibrary = false;
   isExecutable = true;
   enableSharedLibraries = false;

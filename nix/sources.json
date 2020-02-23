@@ -12,6 +12,18 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "1.4.2.0"
     },
+    "base16-nix": {
+        "branch": "master",
+        "description": "Home manager module for themeing programs with base16 templates",
+        "homepage": null,
+        "owner": "u-quark",
+        "repo": "base16-nix",
+        "rev": "8627983bbd1f5fe16e1cfe1926274f3da0f92519",
+        "sha256": "1saq59wk1rd89lgbdliln4qcbc7kzjg995lmc045im6brliqivhv",
+        "type": "tarball",
+        "url": "https://github.com/u-quark/base16-nix/archive/8627983bbd1f5fe16e1cfe1926274f3da0f92519.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "brick": {
         "branch": "master",
         "description": "A declarative Unix terminal UI programming library written in Haskell",

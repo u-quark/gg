@@ -1,0 +1,3 @@
+default: 
+    extension: .hs
+    output: src

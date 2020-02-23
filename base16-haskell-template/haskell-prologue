@@ -1,0 +1,11 @@
+{-
+  This file is generated based on the base16 schemes using pybase16 builder.
+-}
+module GG.UI.BuiltinColorSchemes
+  ( builtinColorSchemes
+  ) where
+
+import           GG.UI.Common (ColorScheme (..))
+
+builtinColorSchemes :: [ColorScheme]
+builtinColorSchemes = [

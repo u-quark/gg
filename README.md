@@ -87,6 +87,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+## Acknowledgments
+
+### base16 color schemes
+
+All color schemes are based on [base16](http://chriskempson.com/projects/base16/)
+and are released under the MIT (or more permissive) licence. Individual authors for
+each color scheme can be found [here](https://github.com/chriskempson/base16#scheme-repositories).
+
 ## Thanks to:
  * [Oleh Stolyar](https://github.com/stolyaroleh)
 
