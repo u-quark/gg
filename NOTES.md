@@ -49,7 +49,29 @@ Alternatives
 
 https://mystor.github.io/git-revise.html
 https://git-cola.github.io/
-
+https://github.com/bigH/git-fuzzy A CLI interface to git that relies heavily on fzf.
+https://github.com/jesseduffield/lazygit/ A simple terminal UI for git commands, written in Go.
+https://github.com/wfxr/forgit Utility tool for using git interactively. Powered by junegunn/fzf.
+https://en.wikipedia.org/wiki/Comparison_of_Git_GUIs
+https://github.com/andys8/git-brunch A git branch checkout command-line tool
+https://github.com/extrawurst/gitui Blazing fast terminal client for git written in Rust
+https://github.com/lunaryorn/git-gone prune "gone" Git branches
+https://github.com/git-up/GitUp Work quickly, safely, and without headaches. The Git interface you've been missing all your life has finally arrived.
+https://github.com/jonas/tig Tig text-mode interface for Git
+https://github.com/extrawurst/gitui Blazing fast terminal-ui for git written in rust
+https://github.com/vamolessa/verco A simple Git/Mercurial/PlasticSCM tui client based on keyboard shortcuts
+https://github.com/jwlodek/pyautogit A TUI for working with git repositories written in python using py_cui.
+https://github.com/hugit-project/hugit The humane Terminal UI for git!
+https://github.com/vaheqelyan/tygit A basic terminal interface for git, written on Node.js [Project not maintained]
+https://github.com/SKalt/git-cc A git extension to help write conventional commits
+https://github.com/ArthurSonzogni/git-tui Collection of human friendly terminal interface for git.
+https://github.com/tommyclark/asciigit A command line ASCII Git GUI
+https://github.com/kalkin/git-log-viewer An alternative to tig which supports folding the merges.
+https://github.com/yasukotelin/gitone gitone is simple git tree viewer TUI application!
+https://github.com/QaQAdrian/git-tui git tui tool
+Awesome Open Source
+https://awesomeopensource.com/projects/git/tui
+https://awesomeopensource.com/projects/git/haskell
 
 Reduce executable size
 ======================
@@ -65,6 +87,16 @@ http://hackage.haskell.org/package/gdiff-th
 http://hackage.haskell.org/package/aeson-diff
 http://hackage.haskell.org/package/hspec-expectations-pretty-diff
 
+Diff libs/tools
+===============
+
+https://blog.trailofbits.com/2020/08/28/graphtage/
+https://blog.trailofbits.com/2019/11/01/two-new-tools-that-tame-the-treachery-of-files/
+https://dl.acm.org/doi/pdf/10.1145/3406088.3409026
+https://github.com/paulfitz/daff
+https://github.com/homeport/dyff
+https://github.com/dandavison/delta GO and pretty
+
 Wcwidth problems
 ================
 
@@ -75,4 +107,16 @@ http://git.musl-libc.org/cgit/musl/tree/src/ctype/wcwidth.c?id=9b2921bea1d501783
 https://github.com/richfelker/musl-chartable-tools/tree/master/ctype
 https://github.com/jquast/wcwidth/blob/master/wcwidth/wcwidth.py
 https://github.com/kovidgoyal/kitty/blob/master/kitty/wcwidth-std.h
+
+Build
+=====
+
+https://input-output-hk.github.io/haskell.nix/user-guide/cross-compilation/#static-executables-with-musl-libc
+https://gcc.gnu.org/onlinedocs/gcc/Link-Options.html
+https://cristianadam.eu/20190501/bundling-together-static-libraries-with-cmake/
+https://stackoverflow.com/questions/50022318/using-cmake-to-build-a-static-library-of-static-libraries
+https://discourse.nixos.org/t/static-libraries-discarded/991
+https://sourceware.org/binutils/docs/binutils/nm.html
+https://renenyffenegger.ch/notes/development/languages/C-C-plus-plus/GCC/create-libraries/index
+https://github.com/NixOS/nixpkgs/issues/36883
 

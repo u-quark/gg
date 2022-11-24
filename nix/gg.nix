@@ -19,6 +19,7 @@
   bytestring,
   MissingH,
   wreq,
+  colour,
   # C deps
   libgit2,
   # Transitive Haskell C deps

@@ -12,7 +12,6 @@ in
 stdenv.mkDerivation {
   name = "gg-haskell-base16-schemes";
 
-  paths = schemes;
   src = stdenv.lib.sourceByRegex ../base16-haskell-template [".*"];
 
   buildInputs = [ schemes pybase16-builder ];

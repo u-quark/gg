@@ -23,23 +23,23 @@ import           Data.Word (Word8)
 
 data ColorScheme =
   ColorScheme
-    { name        :: String
-    , description :: String
-    , author      :: String
-    , base00      :: (Word8, Word8, Word8)
-    , base01      :: (Word8, Word8, Word8)
-    , base02      :: (Word8, Word8, Word8)
-    , base03      :: (Word8, Word8, Word8)
-    , base04      :: (Word8, Word8, Word8)
-    , base05      :: (Word8, Word8, Word8)
-    , base06      :: (Word8, Word8, Word8)
-    , base07      :: (Word8, Word8, Word8)
-    , base08      :: (Word8, Word8, Word8)
-    , base09      :: (Word8, Word8, Word8)
-    , base0A      :: (Word8, Word8, Word8)
-    , base0B      :: (Word8, Word8, Word8)
-    , base0C      :: (Word8, Word8, Word8)
-    , base0D      :: (Word8, Word8, Word8)
-    , base0E      :: (Word8, Word8, Word8)
-    , base0F      :: (Word8, Word8, Word8)
+    { colorSchemeName        :: String
+    , colorSchemeDescription :: String
+    , colorSchemeAuthor      :: String
+    , base00                 :: (Word8, Word8, Word8)
+    , base01                 :: (Word8, Word8, Word8)
+    , base02                 :: (Word8, Word8, Word8)
+    , base03                 :: (Word8, Word8, Word8)
+    , base04                 :: (Word8, Word8, Word8)
+    , base05                 :: (Word8, Word8, Word8)
+    , base06                 :: (Word8, Word8, Word8)
+    , base07                 :: (Word8, Word8, Word8)
+    , base08                 :: (Word8, Word8, Word8)
+    , base09                 :: (Word8, Word8, Word8)
+    , base0A                 :: (Word8, Word8, Word8)
+    , base0B                 :: (Word8, Word8, Word8)
+    , base0C                 :: (Word8, Word8, Word8)
+    , base0D                 :: (Word8, Word8, Word8)
+    , base0E                 :: (Word8, Word8, Word8)
+    , base0F                 :: (Word8, Word8, Word8)
     }

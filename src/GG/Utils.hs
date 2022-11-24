@@ -17,6 +17,7 @@
 -}
 module GG.Utils
   ( interactProcessBSS
+  , uncurry3
   ) where
 
 import           Control.Concurrent      (forkIO, killThread)
@@ -101,3 +102,6 @@ ignoreSigPipe =
       IOError {ioe_type = ResourceVanished, ioe_errno = Just ioe}
         | Errno ioe == ePIPE -> return ()
       _ -> throwIO e
+
+uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
+uncurry3 f (a, b, c) = f a b c

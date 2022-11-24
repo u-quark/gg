@@ -15,11 +15,10 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE RecordWildCards  #-}
+{-# LANGUAGE TypeApplications #-}
 
 module GG.UI
   ( main
@@ -47,6 +46,9 @@ import qualified GG.Repo                as R
 import qualified GG.State               as S
 import           GG.Timers              (AnimationCb, AnimationEndCb, Duration,
                                          addAnimation, tickEventHandler)
+import qualified GG.UI.Attrs            as Attr
+import           GG.UI.Theme            (defaultAttrMap)
+import           GG.Utils               (uncurry3)
 import qualified Graphics.Vty           as V
 import qualified Libgit2                as G
 import           Prelude                hiding (head)
@@ -61,7 +63,7 @@ app =
     , appChooseCursor = neverShowCursor
     , appHandleEvent = handleEvent
     , appStartEvent = startEvent
-    , appAttrMap = const theMap
+    , appAttrMap = const defaultAttrMap
     }
 
 startEvent :: S.State -> EventM S.Name S.State
@@ -203,93 +205,6 @@ notificationAnimationEnd s = do
   let s' = set (field @"notification") Nothing s
   pure (s', [])
 
-defaultAttr :: AttrName
-defaultAttr = "default"
-
-oidAttr :: AttrName
-oidAttr = listAttr <> "oid"
-
-authorAttr :: AttrName
-authorAttr = listAttr <> "author"
-
-dateAttr :: AttrName
-dateAttr = listAttr <> "date"
-
-statusBarAttr :: AttrName
-statusBarAttr = "status_bar"
-
-statusBranchAttr :: AttrName
-statusBranchAttr = statusBarAttr <> "status_branch"
-
-notificationAttr :: AttrName
-notificationAttr = "notification"
-
-notificationEmphasisAttr :: AttrName
-notificationEmphasisAttr = notificationAttr <> "emphasis"
-
-notificationFailureAttr :: AttrName
-notificationFailureAttr = notificationAttr <> "failure"
-
-commitSummary :: AttrName
-commitSummary = "commit_summary"
-
-fullOid :: AttrName
-fullOid = statusBranchAttr <> "oid"
-
-statsFilesModified :: AttrName
-statsFilesModified = statusBranchAttr <> "modifications"
-
-statsInsertions :: AttrName
-statsInsertions = statusBranchAttr <> "additions"
-
-statsDeletions :: AttrName
-statsDeletions = statusBranchAttr <> "deletions"
-
-fileDelta :: AttrName
-fileDelta = "file_delta"
-
-fileAdded :: AttrName
-fileAdded = fileDelta <> "added"
-
-fileDeleted :: AttrName
-fileDeleted = fileDelta <> "deleted"
-
-fileModified :: AttrName
-fileModified = fileDelta <> "modified"
-
-fileRenamed :: AttrName
-fileRenamed = fileDelta <> "renamed"
-
-fileCopied :: AttrName
-fileCopied = fileDelta <> "copied"
-
-diffAttr :: AttrName
-diffAttr = "diff"
-
-diffHeader :: AttrName
-diffHeader = diffAttr <> "header"
-
-diffAddedLine :: AttrName
-diffAddedLine = diffAttr <> "added_line"
-
-diffDeletedLine :: AttrName
-diffDeletedLine = diffAttr <> "deleted_line"
-
-diffAddedText :: AttrName
-diffAddedText = diffAttr <> "added_text"
-
-diffDeletedText :: AttrName
-diffDeletedText = diffAttr <> "deleted_text"
-
-diffSpecialText :: AttrName
-diffSpecialText = diffAttr <> "special_text"
-
-diffLineNumber :: AttrName
-diffLineNumber = diffAttr <> "line_number"
-
-diffLineNumberSep :: AttrName
-diffLineNumberSep = diffAttr <> "line_number_separator"
-
 myFormatTime :: ZonedTime -> String
 myFormatTime = formatTime defaultTimeLocale "%Y-%m-%d %H:%M"
 
@@ -304,16 +219,16 @@ drawCommit _selected c =
   pure $
   foldr1
     (<+>)
-    [ withAttr oidAttr (str $ formatOid (c ^. field @"oid"))
+    [ withAttr Attr.oid (str $ formatOid (c ^. field @"oid"))
     , str " "
     , if c ^. field @"open"
         then str $ eyesIcon ++ " "
         else emptyWidget
     , str (c ^. field @"summary")
     , padRight Max (str " ")
-    , withAttr authorAttr (str ((c ^. field @"authorName") <> " <" <> (c ^. field @"authorEmail") <> ">"))
+    , withAttr Attr.author (str ((c ^. field @"authorName") <> " <" <> (c ^. field @"authorEmail") <> ">"))
     , str " "
-    , withAttr dateAttr (str $ myFormatTime (c ^. field @"authorWhen"))
+    , withAttr Attr.date (str $ myFormatTime (c ^. field @"authorWhen"))
     ]
 
 drawUI :: S.State -> [Widget S.Name]
@@ -325,7 +240,7 @@ drawUI s = [runReader ui env]
       openCommitUI <-
         maybe
           (pure emptyWidget)
-          (fmap (withAttr defaultAttr . padBottom Max) . drawOpenCommit)
+          (fmap (withAttr Attr.defaultAttr . padBottom Max) . drawOpenCommit)
           (s ^. field @"openCommit")
       let commitRenderer isSelected commit = flip runReader env $ drawCommit isSelected commit
       let commitListUI = padBottom Max (renderList commitRenderer True (s ^. field @"commitList"))
@@ -336,8 +251,8 @@ drawStatusBar s = do
   notificationUI <- drawNotification (s ^. field @"notification")
   pure $
     withAttr
-      statusBarAttr
-      (withAttr statusBranchAttr (str ("On " <> s ^. field @"head" . field @"shorthand")) <+> padRight Max (str " ")) <+>
+      Attr.statusBar
+      (withAttr Attr.statusBranch (str ("On " <> s ^. field @"head" . field @"shorthand")) <+> padRight Max (str " ")) <+>
     notificationUI
 
 drawNotification :: Maybe (S.Notification, Double) -> UI
@@ -350,29 +265,29 @@ drawNotification =
         S.ActionFailure actionFailure ->
           case actionFailure of
             A.RebaseConflict commit baseCommit ->
-              withAnimAttr notificationAttr opacity $ str (iconMaybe boomIcon) <+> str "Conflicts applying commit " <+>
-              withAnimAttr notificationEmphasisAttr opacity (str commit) <+>
+              withAnimAttr Attr.notification opacity $ str (iconMaybe boomIcon) <+> str "Conflicts applying commit " <+>
+              withAnimAttr Attr.notificationEmphasis opacity (str commit) <+>
               str " on top of commit " <+>
-              withAnimAttr notificationEmphasisAttr opacity (str baseCommit)
+              withAnimAttr Attr.notificationEmphasis opacity (str baseCommit)
             A.RebaseMergeCommit commit ->
-              withAnimAttr notificationAttr opacity $ str (iconMaybe boomIcon) <+> str "Can not apply merge commit " <+>
-              withAnimAttr notificationEmphasisAttr opacity (str commit)
+              withAnimAttr Attr.notification opacity $ str (iconMaybe boomIcon) <+> str "Can not apply merge commit " <+>
+              withAnimAttr Attr.notificationEmphasis opacity (str commit)
             A.GPGError code errorMsg ->
-              withAnimAttr notificationAttr opacity $ str (iconMaybe errorIcon) <+> str " GPG error: [" <+>
-              withAnimAttr notificationEmphasisAttr opacity (str (show code)) <+>
+              withAnimAttr Attr.notification opacity $ str (iconMaybe errorIcon) <+> str " GPG error: [" <+>
+              withAnimAttr Attr.notificationEmphasis opacity (str (show code)) <+>
               str "] " <+>
-              withAnimAttr notificationEmphasisAttr opacity (str $ replace "\n" " " errorMsg)
-            A.UndoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> undoIcon)
-            A.RedoFailure _ -> withAnimAttr notificationFailureAttr opacity (str $ noIcon <> redoIcon)
-            A.ReachedTop -> withAnimAttr notificationFailureAttr opacity (str topIcon)
-            A.ReachedBottom -> withAnimAttr notificationFailureAttr opacity (str bottomIcon)
-            A.InvalidAction -> withAnimAttr notificationFailureAttr opacity (str noIcon)
+              withAnimAttr Attr.notificationEmphasis opacity (str $ replace "\n" " " errorMsg)
+            A.UndoFailure _ -> withAnimAttr Attr.notificationFailure opacity (str $ noIcon <> undoIcon)
+            A.RedoFailure _ -> withAnimAttr Attr.notificationFailure opacity (str $ noIcon <> redoIcon)
+            A.ReachedTop -> withAnimAttr Attr.notificationFailure opacity (str topIcon)
+            A.ReachedBottom -> withAnimAttr Attr.notificationFailure opacity (str bottomIcon)
+            A.InvalidAction -> withAnimAttr Attr.notificationFailure opacity (str noIcon)
         S.ActionWarning actionWarning ->
           case actionWarning of
             A.X509SigningNotSupported ->
-              withAnimAttr notificationAttr opacity $ str (iconMaybe warningIcon) <+>
+              withAnimAttr Attr.notification opacity $ str (iconMaybe warningIcon) <+>
               str " Commit Singing with X509 is not supported. Disable with " <+>
-              withAnimAttr notificationEmphasisAttr opacity (str "gg-gpg.format = false")
+              withAnimAttr Attr.notificationEmphasis opacity (str "gg-gpg.format = false")
       where iconMaybe icon =
               if opacity > 0.6
                 then icon
@@ -403,32 +318,32 @@ drawSignatures c = pure $ foldr1 (<=>) cases
     datesSame =
       (zonedTimeToLocalTime authorWhen == zonedTimeToLocalTime committerWhen) &&
       (zonedTimeZone authorWhen == zonedTimeZone committerWhen)
-    sigName name email = withAttr authorAttr (str (name <> " <" <> email <> ">"))
-    sigDate date = withAttr dateAttr (str $ myFormatTime date)
+    sigName name email = withAttr Attr.author (str (name <> " <" <> email <> ">"))
+    sigDate date = withAttr Attr.date (str $ myFormatTime date)
     sigAuthorName = sigName authorName authorEmail
     sigAuthorDate = sigDate authorWhen
     sigCommitterName = sigName committerName committerEmail
     sigCommitterDate = sigDate committerWhen
     cases
       | nameEmailSame && datesSame =
-        map (fillLine defaultAttr) [str "Author:    " <+> sigAuthorName, str "Date:      " <+> sigAuthorDate]
+        map (fillLine Attr.defaultAttr) [str "Author:    " <+> sigAuthorName, str "Date:      " <+> sigAuthorDate]
       | not nameEmailSame && datesSame =
         map
-          (fillLine defaultAttr)
+          (fillLine Attr.defaultAttr)
           [ str "Author:    " <+> sigAuthorName
           , str "Committer: " <+> sigCommitterName
           , str "Date:      " <+> sigCommitterDate
           ]
       | nameEmailSame && not datesSame =
         map
-          (fillLine defaultAttr)
+          (fillLine Attr.defaultAttr)
           [ str "Author:      " <+> sigAuthorName
           , str "Date:        " <+> sigAuthorDate
           , str "Commit Date: " <+> sigCommitterDate
           ]
       | not nameEmailSame && not datesSame =
         map
-          (fillLine defaultAttr)
+          (fillLine Attr.defaultAttr)
           [ str "Author:    " <+> sigAuthorName
           , str "Date:      " <+> sigAuthorDate
           , str "Committer: " <+> sigCommitterName
@@ -443,7 +358,7 @@ drawDiff diffInfo =
     (\(diffDelta, deltaInfo) -> do
        deltaUI <- drawDelta diffDelta
        deltaInfoUI <- drawDeltaInfo deltaInfo
-       pure $ fillLine defaultAttr (str " ") <=> deltaUI <=> deltaInfoUI)
+       pure $ fillLine Attr.defaultAttr (str " ") <=> deltaUI <=> deltaInfoUI)
     diffInfo
 
 data FileType
@@ -466,7 +381,8 @@ drawDelta G.DiffDelta { diffDeltaSimilarity = G.Similarity similarity
                       , diffDeltaNewFile = new
                       , diffDeltaStatus = deltaType
                       } =
-  pure $ fillLine fileDelta $ withAttr attr (str text <+> drawTypeTransition <+> drawModeTransition <+> drawSimilarity)
+  pure $ fillLine Attr.fileDelta $
+  withAttr attr (str text <+> drawTypeTransition <+> drawModeTransition <+> drawSimilarity)
   where
     fileExists file = G.diffFileFlags file `isFlagSet` G.diffExists
     oldExists = fileExists old
@@ -490,7 +406,7 @@ drawDelta G.DiffDelta { diffDeltaSimilarity = G.Similarity similarity
     drawTypeTransition
       | not (oldExists && newExists) = emptyWidget
       | oldType /= newType =
-        str ", " <+> withAttr fileModified (str $ typeIcon oldType <> rightArrowIcon <> typeIcon newType)
+        str ", " <+> withAttr Attr.fileModified (str $ typeIcon oldType <> rightArrowIcon <> typeIcon newType)
       | otherwise = emptyWidget
     modeIcon File       = ""
     modeIcon Executable = gearIcon
@@ -508,28 +424,28 @@ drawDelta G.DiffDelta { diffDeltaSimilarity = G.Similarity similarity
         (_, _) -> ""
     drawModeTransition
       | drawModeTransitionStr == "" = emptyWidget
-      | otherwise = str ", " <+> withAttr fileModified (str drawModeTransitionStr)
+      | otherwise = str ", " <+> withAttr Attr.fileModified (str drawModeTransitionStr)
     sameNameModeIcon
       | drawModeTransitionStr == "" = ""
       | otherwise = modeIcon newMode
     drawSimilarity
       | similarity == 0 = emptyWidget
       | similarity == 100 = emptyWidget
-      | otherwise = str ", " <+> withAttr fileModified (str (pencilIcon <> " " <> show similarity <> "% similar"))
+      | otherwise = str ", " <+> withAttr Attr.fileModified (str (pencilIcon <> " " <> show similarity <> "% similar"))
     (attr, text) =
       case (oldExists, newExists) of
         (True, True)
           | sameName
           , deltaType `elem` [G.DeltaModified, G.DeltaTypechange]
-          , newType == Normal -> (fileModified, intercalate "" [editIcon, newName, sameNameModeIcon])
+          , newType == Normal -> (Attr.fileModified, intercalate "" [editIcon, newName, sameNameModeIcon])
         (True, True)
           | sameName
           , deltaType `elem` [G.DeltaModified, G.DeltaTypechange] ->
-            (fileModified, intercalate "" [pencilIcon, typeIcon newType, newName, sameNameModeIcon])
+            (Attr.fileModified, intercalate "" [pencilIcon, typeIcon newType, newName, sameNameModeIcon])
         (True, True)
           | not sameName
           , deltaType == G.DeltaCopied ->
-            ( fileCopied
+            ( Attr.fileCopied
             , intercalate
                 ""
                 [ sparklesIcon
@@ -546,7 +462,7 @@ drawDelta G.DiffDelta { diffDeltaSimilarity = G.Similarity similarity
         (True, True)
           | not sameName
           , deltaType == G.DeltaRenamed ->
-            ( fileRenamed
+            ( Attr.fileRenamed
             , intercalate
                 ""
                 [ typeIcon oldType
@@ -561,11 +477,11 @@ drawDelta G.DiffDelta { diffDeltaSimilarity = G.Similarity similarity
                 ])
         (False, True)
           | deltaType == G.DeltaAdded ->
-            (fileAdded, intercalate "" [sparklesIcon, typeIcon newType, newName, modeIcon newMode])
+            (Attr.fileAdded, intercalate "" [sparklesIcon, typeIcon newType, newName, modeIcon newMode])
         (True, False)
           | deltaType == G.DeltaDeleted ->
-            (fileDeleted, intercalate "" [crossIcon, typeIcon oldType, oldName, modeIcon oldMode])
-        _ -> (fileModified, "Unknown file change?!")
+            (Attr.fileDeleted, intercalate "" [crossIcon, typeIcon oldType, oldName, modeIcon oldMode])
+        _ -> (Attr.fileModified, "Unknown file change?!")
 
 drawDeltaInfo :: G.DeltaInfo -> UI
 drawDeltaInfo (hunkInfos, _diffBinaries) =
@@ -587,15 +503,15 @@ drawHunk hunk = pure cases
         idx = [i | (c, i) <- zip header [0 ..], c == '@']
         k = 1 + fromMaybe (-1) (idx ^? element 3)
     cases
-      | strippedHeader /= "" = withAttr diffHeader (str $ "  " <> strippedHeader)
+      | strippedHeader /= "" = withAttr Attr.diffHeader (str $ "  " <> strippedHeader)
       | otherwise = emptyWidget
 
 drawHunkInfo :: (Int, Int) -> G.HunkInfo -> UI
 drawHunkInfo (oldLineWidth, newLineWidth) (hunk, diffLines) = do
   hunkUI <- drawHunk hunk
   let hunkHeaderUI =
-        fillLine defaultAttr $ withAttr diffLineNumber (str $ center (oldLineWidth + newLineWidth + 1) "...") <+>
-        withAttr diffLineNumberSep (str doubleDividingLine) <+>
+        fillLine Attr.defaultAttr $ withAttr Attr.diffLineNumber (str $ center (oldLineWidth + newLineWidth + 1) "...") <+>
+        withAttr Attr.diffLineNumberSep (str doubleDividingLine) <+>
         hunkUI
   linesUI <- mapM (drawLine (oldLineWidth, newLineWidth)) diffLines
   pure $ hunkHeaderUI <=> foldr1 (<=>) linesUI
@@ -624,21 +540,22 @@ drawLine (oldLineWidth, newLineWidth) diffLine = pure cases
     drawLineNos oldLineNoStr newLineNoStr =
       foldr1
         (<+>)
-        [ withAttr diffLineNumber $ str $ pad oldLineWidth oldLineNoStr
-        , withAttr diffLineNumberSep $ str singleDividingLine
-        , withAttr diffLineNumber $ str $ pad newLineWidth newLineNoStr
-        , withAttr diffLineNumberSep $ str doubleDividingLine
+        [ withAttr Attr.diffLineNumber $ str $ pad oldLineWidth oldLineNoStr
+        , withAttr Attr.diffLineNumberSep $ str singleDividingLine
+        , withAttr Attr.diffLineNumber $ str $ pad newLineWidth newLineNoStr
+        , withAttr Attr.diffLineNumberSep $ str doubleDividingLine
         ]
     drawLine' attr lineUI = withAttr attr $ padRight Max lineUI
     cases
-      | origin == ' ' = drawLineNos (show oldLineNo) (show newLineNo) <+> drawLine' diffAttr (str content)
-      | origin == '+' = drawLineNos "" (show newLineNo) <+> drawLine' diffAddedLine (str content)
-      | origin == '-' = drawLineNos (show oldLineNo) "" <+> drawLine' diffDeletedLine (str content)
+      | origin == ' ' = drawLineNos (show oldLineNo) (show newLineNo) <+> drawLine' Attr.diff (str content)
+      | origin == '+' = drawLineNos "" (show newLineNo) <+> drawLine' Attr.diffAddedLine (str content)
+      | origin == '-' = drawLineNos (show oldLineNo) "" <+> drawLine' Attr.diffDeletedLine (str content)
       | origin == '=' =
-        drawLineNos "" "" <+> drawLine' diffAttr (withAttr diffSpecialText (str $ "no " <> carriageReturnIcon))
-      | origin == '>' = drawLineNos "" "" <+> drawLine' diffAddedLine (withAttr diffAddedText (str carriageReturnIcon))
+        drawLineNos "" "" <+> drawLine' Attr.diff (withAttr Attr.diffSpecialText (str $ "no " <> carriageReturnIcon))
+      | origin == '>' =
+        drawLineNos "" "" <+> drawLine' Attr.diffAddedLine (withAttr Attr.diffAddedText (str carriageReturnIcon))
       | origin == '<' =
-        drawLineNos "" "" <+> drawLine' diffDeletedLine (withAttr diffDeletedText (str carriageReturnIcon))
+        drawLineNos "" "" <+> drawLine' Attr.diffDeletedLine (withAttr Attr.diffDeletedText (str carriageReturnIcon))
       | otherwise = error "Unknown line origin"
 
 drawOpenCommit :: S.OpenCommit -> UI
@@ -647,13 +564,13 @@ drawOpenCommit openCommit = do
   signaturesUI <- drawSignatures (openCommit ^. field @"openCommit")
   diffStatsUI <- drawDiffStats openCommit
   let titleUI =
-        withAttr commitSummary $
+        withAttr Attr.commitSummary $
         foldr1
           (<+>)
           [ str (openCommit ^. (field @"openCommit" . field @"summary"))
           , diffStatsUI
           , padRight Max (str " ")
-          , withAttr fullOid $ str $ show (openCommit ^. (field @"openCommit" . field @"oid"))
+          , withAttr Attr.fullOid $ str $ show (openCommit ^. (field @"openCommit" . field @"oid"))
           ]
   pure $ titleUI <=>
     viewport
@@ -662,9 +579,9 @@ drawOpenCommit openCommit = do
       (cached S.CommitDiffUI $
        foldr1
          (<=>)
-         [ fillLine defaultAttr $ str " "
-         , fillLine defaultAttr $ str (openCommit ^. (field @"openCommit" . field @"body"))
-         , fillLine defaultAttr $ str " "
+         [ fillLine Attr.defaultAttr $ str " "
+         , fillLine Attr.defaultAttr $ str (openCommit ^. (field @"openCommit" . field @"body"))
+         , fillLine Attr.defaultAttr $ str " "
          , signaturesUI
          , diffUI
          ])
@@ -747,11 +664,11 @@ drawDiffStats c =
   foldr1
     (<+>)
     [ str " "
-    , withAttr statsFilesModified $ str $ editIcon ++ show (G.diffStatsFilesChanged diffStats)
+    , withAttr Attr.statsFilesModified $ str $ editIcon ++ show (G.diffStatsFilesChanged diffStats)
     , str " "
-    , withAttr statsInsertions $ str $ plusIcon ++ show (G.diffStatsInsertions diffStats)
+    , withAttr Attr.statsInsertions $ str $ plusIcon ++ show (G.diffStatsInsertions diffStats)
     , str " "
-    , withAttr statsDeletions $ str $ minusIcon ++ show (G.diffStatsDeletions diffStats)
+    , withAttr Attr.statsDeletions $ str $ minusIcon ++ show (G.diffStatsDeletions diffStats)
     ]
   where
     diffStats = c ^. field @"diffStats"
@@ -834,57 +751,54 @@ theMap :: AttrMap
 theMap =
   attrMap
     V.defAttr
-    [ (defaultAttr, base03 `on` base3)
-    , (listAttr, base03 `on` base3)
-    , (listSelectedAttr, base03 `on` base3 `V.withStyle` V.bold)
-    , (oidAttr, fg base01)
-    , (authorAttr, fg violet)
-    , (dateAttr, fg green)
-    , (statusBarAttr, base03 `on` base2)
-    , (statusBranchAttr, fg base03)
-    , (commitSummary, base03 `on` base2 `V.withStyle` V.bold)
-    , (fullOid, fg base01 `V.withStyle` V.bold)
-    , (statsFilesModified, fg cyan)
-    , (statsInsertions, fg green)
-    , (statsDeletions, fg red)
-    , (fileDelta, base03 `on` base3)
-    , (fileAdded, fg green)
-    , (fileDeleted, fg red)
-    , (fileModified, fg cyan)
-    , (fileRenamed, fg violet)
-    , (fileCopied, fg magenta)
-    , (diffAttr, base03 `on` base3)
-    , (diffHeader, V.defAttr `V.withForeColor` base1 `V.withStyle` V.italic)
-    , (diffAddedLine, bg greenBg)
-    , (diffAddedText, bg greenBgBold)
-    , (diffDeletedLine, bg redBg)
-    , (diffDeletedText, bg redBgBold)
-    , (diffSpecialText, V.defAttr `V.withStyle` V.italic)
-    , (diffLineNumber, base01 `on` base2)
-    , (diffLineNumberSep, base1 `on` base2)
+    [ (Attr.defaultAttr, base03 `on` base3)
+    , (Attr.list, base03 `on` base3)
+    , (Attr.listSelected, base03 `on` base3 `V.withStyle` V.bold)
+    , (Attr.oid, fg base01)
+    , (Attr.author, fg violet)
+    , (Attr.date, fg green)
+    , (Attr.statusBar, base03 `on` base2)
+    , (Attr.statusBranch, fg base03)
+    , (Attr.commitSummary, base03 `on` base2 `V.withStyle` V.bold)
+    , (Attr.fullOid, fg base01 `V.withStyle` V.bold)
+    , (Attr.statsFilesModified, fg cyan)
+    , (Attr.statsInsertions, fg green)
+    , (Attr.statsDeletions, fg red)
+    , (Attr.fileDelta, base03 `on` base3)
+    , (Attr.fileAdded, fg green)
+    , (Attr.fileDeleted, fg red)
+    , (Attr.fileModified, fg cyan)
+    , (Attr.fileRenamed, fg violet)
+    , (Attr.fileCopied, fg magenta)
+    , (Attr.diff, base03 `on` base3)
+    , (Attr.diffHeader, V.defAttr `V.withForeColor` base1 `V.withStyle` V.italic)
+    , (Attr.diffAddedLine, bg greenBg)
+    , (Attr.diffAddedText, bg greenBgBold)
+    , (Attr.diffDeletedLine, bg redBg)
+    , (Attr.diffDeletedText, bg redBgBold)
+    , (Attr.diffSpecialText, V.defAttr `V.withStyle` V.italic)
+    , (Attr.diffLineNumber, base01 `on` base2)
+    , (Attr.diffLineNumberSep, base1 `on` base2)
     ]
 
 withAnimAttr :: AttrName -> Double -> Widget S.Name -> Widget S.Name
 withAnimAttr attr
-  | attr == notificationAttr = withBlendFgColor (base03 `on` base2) base03 base2
+  | attr == Attr.notification = withBlendFgColor (base03 `on` base2) base03 base2
 withAnimAttr attr
-  | attr == notificationEmphasisAttr = withBlendFgColor (base03 `on` base2 `V.withStyle` V.bold) base03 base2
+  | attr == Attr.notificationEmphasis = withBlendFgColor (base03 `on` base2 `V.withStyle` V.bold) base03 base2
 withAnimAttr attr
-  | attr == notificationFailureAttr = withBlendFgColor (red `on` base2) red base2
+  | attr == Attr.notificationFailure = withBlendFgColor (red `on` base2) red base2
 withAnimAttr attr = \_a -> withAttr attr
 
 withBlendFgColor :: V.Attr -> V.Color -> V.Color -> Double -> Widget S.Name -> Widget S.Name
 withBlendFgColor attr c1 c2 a = modifyDefAttr $ const attr {V.attrForeColor = V.SetTo $ blendColor c1 c2 a}
-
-uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
-uncurry3 f (a, b, c) = f a b c
 
 blendColor :: V.Color -> V.Color -> Double -> V.Color
 blendColor (V.Color240 c1) (V.Color240 c2) a =
   V.Color240 $ uncurry3 V.rgbColorToColor240 $
   blendRGB (fromJust $ V.color240CodeToRGB c1) (fromJust $ V.color240CodeToRGB c2) a
 blendColor (V.RGBColor r1 g1 b1) (V.RGBColor r2 g2 b2) a = uncurry3 V.RGBColor $ blendRGB (r1, g1, b1) (r2, g2, b2) a
-blendColor _ _ _ = error "Can only blend color Color240 or RGBColor"
+blendColor c1 _c2 _a = c1
 
 gamma :: Double
 gamma = 1

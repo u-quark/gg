@@ -37,6 +37,7 @@ dependencies:
 - http-client
 - deepseq
 - mtl
+- colour
 
 library:
   source-dirs: src
