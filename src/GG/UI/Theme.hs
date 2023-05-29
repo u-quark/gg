@@ -22,7 +22,7 @@
 module GG.UI.Theme
   ( ColorScheme(..)
   , builtinColorSchemes
-  , defaultAttrMap
+  , attrMap
   ) where
 
 import qualified Brick.AttrMap             as B
@@ -33,9 +33,10 @@ import           Data.Colour.RGBSpace      (uncurryRGB)
 import           Data.Colour.RGBSpace.HSV  (hsv, hue, saturation, value)
 import           Data.Colour.SRGB          (Colour, RGB (..), sRGB, sRGB24read,
                                             sRGBBounded, toSRGB, toSRGB24)
+import           Data.Either.Utils         (fromRight)
 import           Data.Foldable             (find)
 import           Data.List                 (intercalate)
-import           Data.Maybe                (fromJust)
+import           Data.Maybe                (fromJust, fromMaybe)
 import           Data.Word                 (Word8)
 import qualified GG.UI.Attrs               as Attr
 import           GG.UI.Common              (ColorScheme (..))
@@ -194,9 +195,9 @@ resolveColorRef stack colorScheme colorNames =
       case lookup colorName colorNames of
         Just colorRef -> resolveColorRef (stack <> [colorName]) colorScheme colorNames colorRef
         Nothing -> Left $ "Unknown color name " <> colorName
-    ColorMix (resolveColorRef stack colorScheme colorNames -> Right baseColor) --
+    ColorMix (resolveColorRef stack colorScheme colorNames -> Right baseColor)
               (resolveColorRef stack colorScheme colorNames -> Right hueColor) -> Right $ colorMix baseColor hueColor
-    ColorMix (resolveColorRef stack colorScheme colorNames -> Right _) --
+    ColorMix (resolveColorRef stack colorScheme colorNames -> Right _)
               (resolveColorRef stack colorScheme colorNames -> Left errorMsg) -> Left errorMsg
     ColorMix colorRef _ -> resolveColorRef stack colorScheme colorNames colorRef
 
@@ -287,10 +288,8 @@ themeToAttrMap colorScheme colorNames theme = do
   defaultAttr <- maybe (Left "Default attr not found") Right $ lookup Attr.defaultAttr resolvedAttrMap
   pure $ B.attrMap defaultAttr resolvedAttrMap
 
-defaultAttrMap :: B.AttrMap
-defaultAttrMap =
-  case themeToAttrMap scheme defaultColorNames defaultTheme of
-    Right x -> x
-    Left _  -> error "Not going to happen"
+attrMap :: String -> B.AttrMap
+attrMap name =
+  fromRight $ themeToAttrMap scheme defaultColorNames defaultTheme
   where
-    scheme = fromJust $ find (\x -> colorSchemeName x == "solarized-dark") builtinColorSchemes
+    scheme = fromMaybe (error $ "Unknown theme: " ++ name) $ find (\x -> colorSchemeName x == name) builtinColorSchemes

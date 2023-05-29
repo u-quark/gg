@@ -30,6 +30,7 @@ import           Data.Generics.Product.Fields (field)
 import           Data.Time                    (ZonedTime)
 import qualified Data.Vector                  as Vec
 import           GG.Actions.Common            (ActionFailure, ActionWarning)
+import           GG.Config                    (Config (..))
 import           GG.Env                       (Env (..))
 import           GG.Timers                    (Timers)
 import           GHC.Generics                 (Generic)
@@ -87,6 +88,7 @@ data Notification
 data State =
   State
     { env          :: Env
+    , config       :: Config
     , commitList   :: L.List Name Commit
     , head         :: Reference
     , repository   :: G.Repository
@@ -97,9 +99,9 @@ data State =
     }
   deriving (Generic)
 
-initState :: Env -> G.Repository -> G.Commit -> Reference -> [Commit] -> Timers State Name TimerName -> State
-initState env_ repo commit head_ l timers_ =
-  State env_ (L.list CommitListUI (Vec.fromList l) 1) head_ repo commit Nothing Nothing timers_
+initState :: Env -> Config -> G.Repository -> G.Commit -> Reference -> [Commit] -> Timers State Name TimerName -> State
+initState env_ config repo commit head_ l timers_ =
+  State env_ config (L.list CommitListUI (Vec.fromList l) 1) head_ repo commit Nothing Nothing timers_
 
 updateRepoState :: G.Commit -> Reference -> [Commit] -> State -> State
 updateRepoState commit head_ l =

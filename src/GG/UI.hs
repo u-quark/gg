@@ -24,7 +24,7 @@ module GG.UI
   ( main
   ) where
 
-import           Brick
+import           Brick                  hiding (attrMap)
 import           Brick.BChan            (BChan)
 import           Brick.Widgets.List
 import           Control.Lens           (element, mapMOf, mapped, set, to, (^.),
@@ -41,13 +41,15 @@ import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime, zonedTimeToLocalTime,
                                          zonedTimeZone)
 import qualified GG.Actions             as A
+import           GG.Config              (getCfg, getCfgM, withCfg)
+import qualified GG.Config              as CFG
 import           GG.Env                 (Env (..))
 import qualified GG.Repo                as R
 import qualified GG.State               as S
 import           GG.Timers              (AnimationCb, AnimationEndCb, Duration,
                                          addAnimation, tickEventHandler)
 import qualified GG.UI.Attrs            as Attr
-import           GG.UI.Theme            (defaultAttrMap)
+import           GG.UI.Theme            (attrMap)
 import           GG.Utils               (uncurry3)
 import qualified Graphics.Vty           as V
 import qualified Libgit2                as G
@@ -63,8 +65,11 @@ app =
     , appChooseCursor = neverShowCursor
     , appHandleEvent = handleEvent
     , appStartEvent = startEvent
-    , appAttrMap = const defaultAttrMap
+    , appAttrMap = getAttrMap
     }
+
+getAttrMap :: S.State -> AttrMap
+getAttrMap s = attrMap $ s ^. field @"config" . field @"ui" . field @"theme"
 
 startEvent :: S.State -> EventM S.Name S.State
 startEvent s = do
@@ -746,40 +751,6 @@ greenBg = rgbColor 0xe3 0xfd 0xe3
 
 greenBgBold :: V.Color
 greenBgBold = rgbColor 0xb8 0xe6 0xb8
-
-theMap :: AttrMap
-theMap =
-  attrMap
-    V.defAttr
-    [ (Attr.defaultAttr, base03 `on` base3)
-    , (Attr.list, base03 `on` base3)
-    , (Attr.listSelected, base03 `on` base3 `V.withStyle` V.bold)
-    , (Attr.oid, fg base01)
-    , (Attr.author, fg violet)
-    , (Attr.date, fg green)
-    , (Attr.statusBar, base03 `on` base2)
-    , (Attr.statusBranch, fg base03)
-    , (Attr.commitSummary, base03 `on` base2 `V.withStyle` V.bold)
-    , (Attr.fullOid, fg base01 `V.withStyle` V.bold)
-    , (Attr.statsFilesModified, fg cyan)
-    , (Attr.statsInsertions, fg green)
-    , (Attr.statsDeletions, fg red)
-    , (Attr.fileDelta, base03 `on` base3)
-    , (Attr.fileAdded, fg green)
-    , (Attr.fileDeleted, fg red)
-    , (Attr.fileModified, fg cyan)
-    , (Attr.fileRenamed, fg violet)
-    , (Attr.fileCopied, fg magenta)
-    , (Attr.diff, base03 `on` base3)
-    , (Attr.diffHeader, V.defAttr `V.withForeColor` base1 `V.withStyle` V.italic)
-    , (Attr.diffAddedLine, bg greenBg)
-    , (Attr.diffAddedText, bg greenBgBold)
-    , (Attr.diffDeletedLine, bg redBg)
-    , (Attr.diffDeletedText, bg redBgBold)
-    , (Attr.diffSpecialText, V.defAttr `V.withStyle` V.italic)
-    , (Attr.diffLineNumber, base01 `on` base2)
-    , (Attr.diffLineNumberSep, base1 `on` base2)
-    ]
 
 withAnimAttr :: AttrName -> Double -> Widget S.Name -> Widget S.Name
 withAnimAttr attr

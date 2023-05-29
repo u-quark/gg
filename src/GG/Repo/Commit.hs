@@ -24,8 +24,8 @@ module GG.Repo.Commit
 
 import           Control.Exception (IOException, catch)
 import qualified Data.ByteString   as BS
-import           GG.Repo.Config    (getCfg, getCfgM, withCfg)
-import qualified GG.Repo.Config    as CFG
+import           GG.Config         (getCfg, getCfgM, withCfg)
+import qualified GG.Config         as CFG
 import           GG.Utils          (interactProcessBSS)
 import qualified Libgit2           as G
 import           System.Exit       (ExitCode (..))

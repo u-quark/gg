@@ -15,10 +15,11 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module GG.Repo.Config
+module GG.Config
   ( Cfg
   , CfgEntry
   , CfgEntryM
@@ -30,9 +31,14 @@ module GG.Repo.Config
   , gpgFormat
   , gpgOpenpgpProgram
   , userSigningKey
+  , uiTheme
+  , Config (..)
+  , UI (..)
+  , readConfig
   ) where
 
 import           Control.Exception (catch)
+import           GHC.Generics      (Generic)
 import qualified Libgit2           as G
 
 newtype Cfg =
@@ -107,3 +113,27 @@ gpgOpenpgpProgram = CfgGitM "gpg" "openpgp.program"
 
 userSigningKey :: CfgEntryM String
 userSigningKey = CfgGitM "user" "signingKey"
+
+uiTheme :: CfgEntry String
+uiTheme = CfgGit "ui" "theme" "gruvbox-dark-medium"
+
+data UI =
+  UI
+    { theme :: String
+    }
+  deriving (Generic)
+
+data Config =
+  Config
+    { ui :: UI
+    }
+  deriving (Generic)
+
+readConfig :: G.Repository -> IO Config
+readConfig repo =
+  withCfg repo $ \cfg -> do
+    theme <- getCfg uiTheme cfg
+    pure $ Config
+      { ui = UI
+          { theme = theme }
+      }
