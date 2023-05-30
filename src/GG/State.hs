@@ -20,6 +20,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE Rank2Types            #-}
 {-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE RecordWildCards       #-}
 
 module GG.State where
 
@@ -100,8 +101,8 @@ data State =
   deriving (Generic)
 
 initState :: Env -> Config -> G.Repository -> G.Commit -> Reference -> [Commit] -> Timers State Name TimerName -> State
-initState env_ config repo commit head_ l timers_ =
-  State env_ config (L.list CommitListUI (Vec.fromList l) 1) head_ repo commit Nothing Nothing timers_
+initState env config repository contCommit head l timers =
+  State {commitList=(L.list CommitListUI (Vec.fromList l) 1), openCommit=Nothing, notification=Nothing, ..}
 
 updateRepoState :: G.Commit -> Reference -> [Commit] -> State -> State
 updateRepoState commit head_ l =

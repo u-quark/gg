@@ -41,8 +41,6 @@ import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime, zonedTimeToLocalTime,
                                          zonedTimeZone)
 import qualified GG.Actions             as A
-import           GG.Config              (getCfg, getCfgM, withCfg)
-import qualified GG.Config              as CFG
 import           GG.Env                 (Env (..))
 import qualified GG.Repo                as R
 import qualified GG.State               as S
@@ -691,66 +689,14 @@ rgbColor = V.linearColor
 base03 :: V.Color
 base03 = rgbColor 0x00 0x2b 0x36
 
---
---base02 :: V.Color
---base02 = rgbColor 0x07 0x36 0x42
---
-base01 :: V.Color
-base01 = rgbColor 0x58 0x6e 0x75
-
---
---base00 :: V.Color
---base00 = rgbColor 0x65 0x7b 0x83
---
---base0 :: V.Color
---base0 = rgbColor 0x83 0x94 0x96
---
-base1 :: V.Color
-base1 = rgbColor 0x93 0xa1 0xa1
-
 base2 :: V.Color
 base2 = rgbColor 0xee 0xe8 0xd5
 
 base3 :: V.Color
 base3 = rgbColor 0xfd 0xf6 0xe3
 
---
---yellow :: V.Color
---yellow = rgbColor 0xb5 0x89 0x00
---
---orange :: V.Color
---orange = rgbColor 0xcb 0x4b 0x16
---
 red :: V.Color
 red = rgbColor 0xdc 0x32 0x2f
-
-redBg :: V.Color
-redBg = rgbColor 0xfd 0xe3 0xe3
-
-redBgBold :: V.Color
-redBgBold = rgbColor 0xff 0xbf 0xbf
-
-magenta :: V.Color
-magenta = rgbColor 0xd3 0x36 0x82
-
-violet :: V.Color
-violet = rgbColor 0x6c 0x71 0xc4
-
---
---blue :: V.Color
---blue = rgbColor 0x26 0x8b 0xd2
---
-cyan :: V.Color
-cyan = rgbColor 0x2a 0xa1 0x98
-
-green :: V.Color
-green = rgbColor 0x85 0x99 0x00
-
-greenBg :: V.Color
-greenBg = rgbColor 0xe3 0xfd 0xe3
-
-greenBgBold :: V.Color
-greenBgBold = rgbColor 0xb8 0xe6 0xb8
 
 withAnimAttr :: AttrName -> Double -> Widget S.Name -> Widget S.Name
 withAnimAttr attr

@@ -18,6 +18,7 @@
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards     #-}
 
 module GG.Config
   ( Cfg
@@ -133,7 +134,5 @@ readConfig :: G.Repository -> IO Config
 readConfig repo =
   withCfg repo $ \cfg -> do
     theme <- getCfg uiTheme cfg
-    pure $ Config
-      { ui = UI
-          { theme = theme }
-      }
+    let ui = UI{..}
+    pure $ Config{..}
