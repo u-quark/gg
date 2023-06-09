@@ -111,6 +111,8 @@ resolveColorRef stack colorScheme colorNames =
               (resolveColorRef stack colorScheme colorNames -> Right hueColor) -> Right $ colorMix baseColor hueColor
     ColorMix (resolveColorRef stack colorScheme colorNames -> Right _)
               (resolveColorRef stack colorScheme colorNames -> Left errorMsg) -> Left errorMsg
+    ColorMix (resolveColorRef stack colorScheme colorNames -> Left errorMsg)
+              (resolveColorRef stack colorScheme colorNames -> _) -> Left errorMsg
     ColorMix colorRef _ -> resolveColorRef stack colorScheme colorNames colorRef
 
 colorMix :: V.Color -> V.Color -> V.Color
@@ -132,8 +134,9 @@ colorMix_ (rB, gB, bB) (rH, gH, bH) = (rR, gR, bR)
     cH = toSRGB $ sRGBBounded rH gH bH :: RGB Double
     h = hue cH
     s = saturation cB
+    s' = max s 0.2
     v = value cB
-    RGB rR gR bR = toSRGB24 $ uncurryRGB sRGB $ hsv h s v
+    RGB rR gR bR = toSRGB24 $ uncurryRGB sRGB $ hsv h s' v
 
 resolveAttr :: ColorScheme -> ColorNames -> Attr -> Either String V.Attr
 resolveAttr colorScheme colorNames (Attr style c_fg c_bg) = do
