@@ -175,6 +175,8 @@ defaultTheme =
   , (Attr.date, fg "c0B")
   , (Attr.statusBar, "fg" `on` "bg-emphasis")
   , (Attr.statusBranch, fg "fg")
+  , (Attr.notificationEmphasis, fg "fg" `withStyle` V.bold)
+  , (Attr.notificationFailure, fg "error")
   , (Attr.commitSummary, "fg" `on` "bg-emphasis" `withStyle` V.bold)
   , (Attr.fullOid, fg "emphasis" `withStyle` V.bold)
   , (Attr.statsFilesModified, fg "modify")

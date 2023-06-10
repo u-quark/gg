@@ -15,6 +15,7 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE RecordWildCards  #-}
@@ -24,14 +25,14 @@ module GG.UI
   ( main
   ) where
 
-import           Brick                  hiding (attrMap)
+import           Brick                  hiding (attrMap, attrName)
 import           Brick.BChan            (BChan)
 import           Brick.Widgets.List
 import           Control.Lens           (element, mapMOf, mapped, set, to, (^.),
                                          (^?), (^?!), _2)
 import           Control.Monad          (foldM, void, when)
 import           Control.Monad.IO.Class (liftIO)
-import           Control.Monad.Reader   (Reader, runReader)
+import           Control.Monad.Reader   (Reader, runReader, ask)
 import           Data.Bits              (Bits, zeroBits, (.&.))
 import           Data.Generics.Product  (field)
 import           Data.List              (intercalate)
@@ -40,6 +41,7 @@ import           Data.String.Utils      (replace)
 import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime, zonedTimeToLocalTime,
                                          zonedTimeZone)
+import           GHC.Generics           (Generic)
 import qualified GG.Actions             as A
 import qualified GG.Repo                as R
 import qualified GG.State               as S
@@ -57,6 +59,7 @@ data Env =
   Env
     { attrMap :: AttrMap
     }
+  deriving (Generic)
 
 getEnv :: S.State -> Env
 getEnv s = Env {..}
@@ -80,8 +83,13 @@ getAttrMap_ s = getAttrMap $ s ^. field @"config" . field @"ui" . field @"theme"
 
 startEvent :: S.State -> EventM S.Name S.State
 startEvent s = do
+  let attrMap = getAttrMap_ s
+  let attr = attrMapLookup Attr.defaultAttr attrMap
+  let bgC_ = case V.attrBackColor attr of
+                V.SetTo bgC -> bgC
+                _ -> error "We should always have a defaultAttr color"
   vty <- getVtyHandle
-  liftIO $ V.setBackgroundColor (V.outputIface vty) base3
+  liftIO $ V.setBackgroundColor (V.outputIface vty) bgC_
   return s
 
 handleEvent :: S.State -> BrickEvent S.Name S.Event -> EventM S.Name (Next S.State)
@@ -268,38 +276,39 @@ drawStatusBar s = do
     notificationUI
 
 drawNotification :: Maybe (S.Notification, Double) -> UI
-drawNotification =
-  \case
-    Nothing -> pure emptyWidget
+drawNotification notificationM = do
+  env <- ask
+  let attrMap = env ^. field @"attrMap"
+  pure $ case notificationM of
+    Nothing -> emptyWidget
     Just (notification, opacity) ->
-      pure $
       case notification of
         S.ActionFailure actionFailure ->
           case actionFailure of
             A.RebaseConflict commit baseCommit ->
-              withAnimAttr Attr.notification opacity $ str (iconMaybe boomIcon) <+> str "Conflicts applying commit " <+>
-              withAnimAttr Attr.notificationEmphasis opacity (str commit) <+>
+              withAnimAttr Attr.notification attrMap opacity $ str (iconMaybe boomIcon) <+> str "Conflicts applying commit " <+>
+              withAnimAttr Attr.notificationEmphasis attrMap opacity (str commit) <+>
               str " on top of commit " <+>
-              withAnimAttr Attr.notificationEmphasis opacity (str baseCommit)
+              withAnimAttr Attr.notificationEmphasis attrMap opacity (str baseCommit)
             A.RebaseMergeCommit commit ->
-              withAnimAttr Attr.notification opacity $ str (iconMaybe boomIcon) <+> str "Can not apply merge commit " <+>
-              withAnimAttr Attr.notificationEmphasis opacity (str commit)
+              withAnimAttr Attr.notification attrMap opacity $ str (iconMaybe boomIcon) <+> str "Can not apply merge commit " <+>
+              withAnimAttr Attr.notificationEmphasis attrMap opacity (str commit)
             A.GPGError code errorMsg ->
-              withAnimAttr Attr.notification opacity $ str (iconMaybe errorIcon) <+> str " GPG error: [" <+>
-              withAnimAttr Attr.notificationEmphasis opacity (str (show code)) <+>
+              withAnimAttr Attr.notification attrMap opacity $ str (iconMaybe errorIcon) <+> str " GPG error: [" <+>
+              withAnimAttr Attr.notificationEmphasis attrMap opacity (str (show code)) <+>
               str "] " <+>
-              withAnimAttr Attr.notificationEmphasis opacity (str $ replace "\n" " " errorMsg)
-            A.UndoFailure _ -> withAnimAttr Attr.notificationFailure opacity (str $ noIcon <> undoIcon)
-            A.RedoFailure _ -> withAnimAttr Attr.notificationFailure opacity (str $ noIcon <> redoIcon)
-            A.ReachedTop -> withAnimAttr Attr.notificationFailure opacity (str topIcon)
-            A.ReachedBottom -> withAnimAttr Attr.notificationFailure opacity (str bottomIcon)
-            A.InvalidAction -> withAnimAttr Attr.notificationFailure opacity (str noIcon)
+              withAnimAttr Attr.notificationEmphasis attrMap opacity (str $ replace "\n" " " errorMsg)
+            A.UndoFailure _ -> withAnimAttr Attr.notificationFailure attrMap opacity (str $ noIcon <> undoIcon)
+            A.RedoFailure _ -> withAnimAttr Attr.notificationFailure attrMap opacity (str $ noIcon <> redoIcon)
+            A.ReachedTop -> withAnimAttr Attr.notificationFailure attrMap opacity (str topIcon)
+            A.ReachedBottom -> withAnimAttr Attr.notificationFailure attrMap opacity (str bottomIcon)
+            A.InvalidAction -> withAnimAttr Attr.notificationFailure attrMap opacity (str noIcon)
         S.ActionWarning actionWarning ->
           case actionWarning of
             A.X509SigningNotSupported ->
-              withAnimAttr Attr.notification opacity $ str (iconMaybe warningIcon) <+>
+              withAnimAttr Attr.notification attrMap opacity $ str (iconMaybe warningIcon) <+>
               str " Commit Singing with X509 is not supported. Disable with " <+>
-              withAnimAttr Attr.notificationEmphasis opacity (str "gg-gpg.format = false")
+              withAnimAttr Attr.notificationEmphasis attrMap opacity (str "gg-gpg.format = false")
       where iconMaybe icon =
               if opacity > 0.6
                 then icon
@@ -691,33 +700,16 @@ closeAction s =
     then continue $ S.closeCommitDetails s
     else halt s
 
-rgbColor :: Integer -> Integer -> Integer -> V.Color
-rgbColor = V.linearColor
+withAnimAttr :: AttrName -> AttrMap -> Double -> Widget S.Name -> Widget S.Name
+withAnimAttr attrName attrMap = withFadeout $ attrMapLookup attrName attrMap
 
--- Solarized (sort of because of color approximation) so my eyes don't bleed
-base03 :: V.Color
-base03 = rgbColor 0x00 0x2b 0x36
+withFadeout :: V.Attr -> Double -> Widget S.Name -> Widget S.Name
+withFadeout attr a = case ((V.attrForeColor attr), (V.attrBackColor attr)) of
+  (V.SetTo fgC, V.SetTo bgC) -> withBlendFg attr fgC bgC a
+  _ -> id
 
-base2 :: V.Color
-base2 = rgbColor 0xee 0xe8 0xd5
-
-base3 :: V.Color
-base3 = rgbColor 0xfd 0xf6 0xe3
-
-red :: V.Color
-red = rgbColor 0xdc 0x32 0x2f
-
-withAnimAttr :: AttrName -> Double -> Widget S.Name -> Widget S.Name
-withAnimAttr attr
-  | attr == Attr.notification = withBlendFgColor (base03 `on` base2) base03 base2
-withAnimAttr attr
-  | attr == Attr.notificationEmphasis = withBlendFgColor (base03 `on` base2 `V.withStyle` V.bold) base03 base2
-withAnimAttr attr
-  | attr == Attr.notificationFailure = withBlendFgColor (red `on` base2) red base2
-withAnimAttr attr = \_a -> withAttr attr
-
-withBlendFgColor :: V.Attr -> V.Color -> V.Color -> Double -> Widget S.Name -> Widget S.Name
-withBlendFgColor attr c1 c2 a = modifyDefAttr $ const attr {V.attrForeColor = V.SetTo $ blendColor c1 c2 a}
+withBlendFg :: V.Attr -> V.Color -> V.Color -> Double -> Widget S.Name -> Widget S.Name
+withBlendFg attr c1 c2 a = modifyDefAttr $ const attr {V.attrForeColor = V.SetTo $ blendColor c1 c2 a}
 
 blendColor :: V.Color -> V.Color -> Double -> V.Color
 blendColor (V.Color240 c1) (V.Color240 c2) a =

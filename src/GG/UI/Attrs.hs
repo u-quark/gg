@@ -47,7 +47,7 @@ statusBranch :: AttrName
 statusBranch = statusBar <> "status_branch"
 
 notification :: AttrName
-notification = "notification"
+notification = statusBar <> "notification"
 
 notificationEmphasis :: AttrName
 notificationEmphasis = notification <> "emphasis"
