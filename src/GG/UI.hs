@@ -41,18 +41,27 @@ import           Data.Time              (ZonedTime, defaultTimeLocale,
                                          formatTime, zonedTimeToLocalTime,
                                          zonedTimeZone)
 import qualified GG.Actions             as A
-import           GG.Env                 (Env (..))
 import qualified GG.Repo                as R
 import qualified GG.State               as S
 import           GG.Timers              (AnimationCb, AnimationEndCb, Duration,
                                          addAnimation, tickEventHandler)
 import qualified GG.UI.Attrs            as Attr
-import           GG.UI.Theme            (attrMap)
+import           GG.UI.Theme            (getAttrMap)
 import           GG.Utils               (uncurry3)
 import qualified Graphics.Vty           as V
 import qualified Libgit2                as G
 import           Prelude                hiding (head)
 import           System.Environment     (lookupEnv, setEnv)
+
+data Env =
+  Env
+    { attrMap :: AttrMap
+    }
+
+getEnv :: S.State -> Env
+getEnv s = Env {..}
+  where
+    attrMap = getAttrMap_ s
 
 type UI = Reader Env (Widget S.Name)
 
@@ -63,11 +72,11 @@ app =
     , appChooseCursor = neverShowCursor
     , appHandleEvent = handleEvent
     , appStartEvent = startEvent
-    , appAttrMap = getAttrMap
+    , appAttrMap = getAttrMap_
     }
 
-getAttrMap :: S.State -> AttrMap
-getAttrMap s = attrMap $ s ^. field @"config" . field @"ui" . field @"theme"
+getAttrMap_ :: S.State -> AttrMap
+getAttrMap_ s = getAttrMap $ s ^. field @"config" . field @"ui" . field @"theme"
 
 startEvent :: S.State -> EventM S.Name S.State
 startEvent s = do
@@ -237,7 +246,7 @@ drawCommit _selected c =
 drawUI :: S.State -> [Widget S.Name]
 drawUI s = [runReader ui env]
   where
-    env = s ^. field @"env"
+    env = getEnv s
     ui = do
       statusBarUI <- drawStatusBar s
       openCommitUI <-

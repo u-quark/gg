@@ -22,7 +22,7 @@
 module GG.UI.Theme
   ( ColorScheme(..)
   , builtinColorSchemes
-  , attrMap
+  , getAttrMap
   ) where
 
 import qualified Brick.AttrMap             as B
@@ -203,8 +203,8 @@ themeToAttrMap colorScheme colorNames theme = do
   defaultAttr <- maybe (Left "Default attr not found") Right $ lookup Attr.defaultAttr resolvedAttrMap
   pure $ B.attrMap defaultAttr resolvedAttrMap
 
-attrMap :: String -> B.AttrMap
-attrMap name =
+getAttrMap :: String -> B.AttrMap
+getAttrMap name =
   fromRight $ themeToAttrMap scheme defaultColorNames defaultTheme
   where
     scheme = fromMaybe (error $ "Unknown theme: " ++ name) $ find (\x -> colorSchemeName x == name) builtinColorSchemes
