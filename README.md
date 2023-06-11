@@ -5,7 +5,6 @@
 A tool for interactively manipulating the history of git repos and for making
 easy (enforcing) the usage of good (opinionated) practices.
 
-[![CircleCI](https://img.shields.io/circleci/build/github/u-quark/gg?logo=circleci&style=plastic)](https://circleci.com/gh/u-quark/gg)
 [![License: GPLv3+](https://img.shields.io/static/v1?label=license&message=GPLv3+&color=bd0000&style=plastic)](https://www.gnu.org/licenses/gpl.html)
 
 ## Install
