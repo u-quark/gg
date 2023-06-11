@@ -5,7 +5,8 @@
 A tool for interactively manipulating the history of git repos and for making
 easy (enforcing) the usage of good (opinionated) practices.
 
-[![License: GPLv3+](https://img.shields.io/static/v1?label=license&message=GPLv3+&color=bd0000&style=plastic)](https://www.gnu.org/licenses/gpl.html)
+[![GitHub Actions badge](https://github.com/u-quark/gg/actions/workflows/build.yml/badge.svg)](https://github.com/u-quark/gg/actions)
+[![License: GPLv3+](https://img.shields.io/static/v1?label=license&message=GPLv3+&color=bd0000)](https://www.gnu.org/licenses/gpl.html)
 
 ## Install
 
