@@ -1,6 +1,6 @@
 {-
   This file is part of gg - git (G)UI.
-  Copyright (C) 2019-2020  Lefteris Kritikos <eleftherios.kritikos@gmail.com>
+  Copyright (C) 2019-2023  Lefteris Kritikos <eleftherios.kritikos@gmail.com>
 
   gg is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
