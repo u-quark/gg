@@ -29,7 +29,7 @@ let
   haskell-base16-schemes = import ./haskell-base16-schemes.nix {
     inherit pkgs;
     pybase16-builder = tools.pybase16-builder;
-    base16-nix = sources.base16-nix;
+    base16-schemes = sources.base16-schemes;
   };
   gg = static-haskell.haskellPackagesWithLibsReadyForStaticLinking.callPackage (import ./gg.nix) {
     ncurses = patched-pkgs.pkgsMusl.static-ncurses;

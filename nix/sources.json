@@ -12,16 +12,16 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "1.4.2.0"
     },
-    "base16-nix": {
+    "base16-schemes": {
         "branch": "master",
-        "description": "Home manager module for themeing programs with base16 templates",
-        "homepage": null,
-        "owner": "u-quark",
-        "repo": "base16-nix",
-        "rev": "8627983bbd1f5fe16e1cfe1926274f3da0f92519",
-        "sha256": "1saq59wk1rd89lgbdliln4qcbc7kzjg995lmc045im6brliqivhv",
+        "description": "base16 schemes collected by the new GitHub organisation tinted-theming",
+        "homepage": "https://github.com/tinted-theming/home",
+        "owner": "tinted-theming",
+        "repo": "base16-schemes",
+        "rev": "9a4002f78dd1094c123169da243680b2fda3fe69",
+        "sha256": "181487j7f3k5q81ffqqgq80skbmz3hcaag43jxs00rcixwbhsy02",
         "type": "tarball",
-        "url": "https://github.com/u-quark/base16-nix/archive/8627983bbd1f5fe16e1cfe1926274f3da0f92519.tar.gz",
+        "url": "https://github.com/tinted-theming/base16-schemes/archive/9a4002f78dd1094c123169da243680b2fda3fe69.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "brick": {

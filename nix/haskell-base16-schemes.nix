@@ -1,26 +1,25 @@
 {
   pkgs,
   pybase16-builder,
-  base16-nix
+  base16-schemes
 }:
 
 with pkgs;
-
-let schemes = lib.mapAttrsToList (_name: value: fetchgit value) (lib.importJSON "${base16-nix}/schemes.json");
-in
 
 stdenv.mkDerivation {
   name = "gg-haskell-base16-schemes";
 
   src = stdenv.lib.sourceByRegex ../base16-haskell-template [".*"];
 
-  buildInputs = [ schemes pybase16-builder ];
+  buildInputs = [ base16-schemes pybase16-builder ];
   buildPhase = ''
-    mkdir schemes
-    for s in ${lib.escapeShellArgs schemes}; do
-      ln -s $s schemes/$(basename $s)
+    for scheme in ${base16-schemes}/*yaml; do
+        scheme_name=$(basename $scheme)
+        scheme_name=''${scheme_name%.*}
+        mkdir -p schemes/$scheme_name
+        cp $scheme schemes/$scheme_name/
     done
-    pybase16 build -t gg-haskell -o output
+    pybase16 build --template gg-haskell --output output
     cat haskell-prologue >>BuiltinColorSchemes.hs
     local first_time;
     first_time='true'
