@@ -36,8 +36,8 @@ mkDerivation {
     "app" "app/.*" "src" "src/.*" "test" "test/.*"
     "stack.yaml" "package.yaml" "Setup.hs" "LICENSE" "README.md" "ChangeLog.md"
   ];
-  postUnpack = ''
-    cp ${haskell-base16-schemes}/BuiltinColorSchemes.hs gg/src/GG/UI/
+  patchPhase= ''
+    cp ${haskell-base16-schemes}/BuiltinColorSchemes.hs src/GG/UI/
   '';
   isLibrary = false;
   isExecutable = true;

@@ -1,13 +1,14 @@
+{ inputs }:
+
 let
   ghc = "ghc881";
-  sources = import ./sources.nix;
-  pkgs = import sources.nh2-nixpkgs {};
+  pkgs = import inputs.nh2-nixpkgs { system = "x86_64-linux"; };
   static-pkgs-overlay = import ./static-pkgs-overlay.nix {
-    inherit sources;
+    inherit inputs;
     inherit pkgs;
   };
   haskell-pkgs-overlay = import ./haskell-pkgs-overlay.nix {
-    inherit sources;
+    inherit inputs;
     haskellLib = pkgs.haskell.lib;
     callCabal2nix = pkgs.haskell.packages."${ghc}".callCabal2nix;
   };
@@ -21,7 +22,7 @@ let
       };
     });
   });
-  static-haskell = import (sources.static-haskell + "/survey") {
+  static-haskell = import (inputs.static-haskell + "/survey") {
     normalPkgs = patched-pkgs;
     compiler = "${ghc}";
   };
@@ -29,7 +30,7 @@ let
   haskell-base16-schemes = import ./haskell-base16-schemes.nix {
     inherit pkgs;
     pybase16-builder = tools.pybase16-builder;
-    base16-schemes = sources.base16-schemes;
+    base16-schemes = inputs.base16-schemes;
   };
   gg = static-haskell.haskellPackagesWithLibsReadyForStaticLinking.callPackage (import ./gg.nix) {
     ncurses = patched-pkgs.pkgsMusl.static-ncurses;

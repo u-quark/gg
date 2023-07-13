@@ -1,4 +1,4 @@
-{ sources, pkgs }:
+{ inputs, pkgs }:
 
 self: super:
 {
@@ -20,8 +20,8 @@ self: super:
     enableStatic = true;
   };
   libgit2 = super.libgit2.overrideAttrs (old: {
-    src = sources.libgit2;
-    version = sources.libgit2.version;
+    src = inputs.libgit2;
+    version = inputs.libgit2.rev;
     cmakeFlags = old.cmakeFlags ++ [ "-DBUILD_SHARED_LIBS=OFF" ];
     nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.binutils ];
     postBuild = ''
