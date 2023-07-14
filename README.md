@@ -91,9 +91,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ### base16 color schemes
 
-All color schemes are based on [base16](http://chriskempson.com/projects/base16/)
-and are released under the MIT (or more permissive) licence. Individual authors for
-each color scheme can be found [here](https://github.com/chriskempson/base16#scheme-repositories).
+All color schemes are based on [Tinted Theming](https://github.com/tinted-theming/home)
+(which in turn was originally based on [base16](https://github.com/chriskempson/base16)).
+Individual authors for each of the color schemes can be found
+[here](https://github.com/tinted-theming/base16-schemes#imported-scheme-repositories).
 
 ## Thanks to:
  * [Oleh Stolyar](https://github.com/stolyaroleh)
