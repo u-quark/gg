@@ -20,7 +20,7 @@
 module Libgit2.StrArray
   ( StrArray(..)
   , StrArrayPtr
-  , strArrayFree
+  , strArrayDispose
   ) where
 
 import Foreign (Storable, peekArray, newArray)
@@ -47,4 +47,4 @@ instance Storable StrArray where
     ptrs <- newArray cstrings
     {#set strarray->strings #} p ptrs
 
-{#fun strarray_free as strArrayFree { `StrArrayPtr' } -> `()'#}
+{#fun strarray_dispose as strArrayDispose { `StrArrayPtr' } -> `()'#}

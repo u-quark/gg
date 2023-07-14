@@ -70,17 +70,17 @@
     "libgit2": {
       "flake": false,
       "locked": {
-        "lastModified": 1576268959,
-        "narHash": "sha256-1+p61RSL6BYm8+bKVhh3VS/vy0VCbxFdaVcLtG8vHEU=",
+        "lastModified": 1681301125,
+        "narHash": "sha256-lW3mokVKsbknVj2xsxEbeZH4IdKZ0aIgGutzenS0Eh0=",
         "owner": "libgit2",
         "repo": "libgit2",
-        "rev": "cb17630b75dbdc502c21da8e73641fa932bc8c6b",
+        "rev": "e6325351ceee58cf56f58bdce61b38907805544f",
         "type": "github"
       },
       "original": {
         "owner": "libgit2",
+        "ref": "v1.6.4",
         "repo": "libgit2",
-        "rev": "cb17630b75dbdc502c21da8e73641fa932bc8c6b",
         "type": "github"
       }
     },

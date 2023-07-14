@@ -696,7 +696,6 @@ newBuf = do
     withForeignPtr fp $ \p -> do
       {#set buf->ptr #} p nullPtr
       {#set buf->size #} p 0
-      {#set buf->asize #} p 0
     pure $ Buf fp
 
 {#fun buf_dispose as bufDispose { `Buf' } -> `()' #}

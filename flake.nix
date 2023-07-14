@@ -15,7 +15,7 @@
       flake = false;
     };
     libgit2 = {
-      url = "github:libgit2/libgit2?rev=cb17630b75dbdc502c21da8e73641fa932bc8c6b";
+      url = "github:libgit2/libgit2?ref=v1.6.4";
       flake = false;
     };
     nh2-nixpkgs = {

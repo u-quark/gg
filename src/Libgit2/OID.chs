@@ -58,5 +58,5 @@ instance Show OID where
 _oidFromCString :: Ptr CUChar -> IO OID
 _oidFromCString str = do
   oid <- newOID
-  withOID oid $ flip {#call oid_fromraw #} str
+  _ <- withOID oid $ flip {#call oid_fromraw #} str
   pure oid
