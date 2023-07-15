@@ -37,7 +37,15 @@ let
     zlib = patched-pkgs.pkgsMusl.zlib;
     inherit haskell-base16-schemes;
   };
+  devShell = pkgs.mkShell {
+    buildInputs = [
+      static-haskell.haskellPackagesWithLibsReadyForStaticLinking.ghc
+      static-haskell.haskellPackagesWithLibsReadyForStaticLinking.Cabal_3_0_0_0
+      static-haskell.haskellPackagesWithLibsReadyForStaticLinking.cabal-install
+    ];
+  };
 in
 {
   inherit gg;
+  inherit devShell;
 }

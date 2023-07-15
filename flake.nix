@@ -50,6 +50,6 @@
       program = "${package.gg}/bin/gg";
     };
     apps.x86_64-linux.default = apps.x86_64-linux.gg;
-    devShells.x86_64-linux.default = package.gg;
+    devShells.x86_64-linux.default = package.devShell;
   };
 }
