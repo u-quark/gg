@@ -134,17 +134,17 @@
     "vty": {
       "flake": false,
       "locked": {
-        "lastModified": 1575756916,
-        "narHash": "sha256-tfywPg524glbZw74Udx471OpbE3Wr1uSYpRJLYeQRx8=",
+        "lastModified": 1689512592,
+        "narHash": "sha256-f+poPfxJcqdv09QftWFOp4Tdf9iSapT2EBp7NZKRsH0=",
         "owner": "u-quark",
         "repo": "vty",
-        "rev": "729636962937d6f3ae0979312d902beafa2ee56d",
+        "rev": "7fd0d7de00b77af6cab8b95e7c11a49b19bdc881",
         "type": "github"
       },
       "original": {
         "owner": "u-quark",
+        "ref": "gg",
         "repo": "vty",
-        "rev": "729636962937d6f3ae0979312d902beafa2ee56d",
         "type": "github"
       }
     },

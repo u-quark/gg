@@ -27,7 +27,7 @@
       flake = false;
     };
     vty = {
-      url = "github:u-quark/vty?rev=729636962937d6f3ae0979312d902beafa2ee56d";
+      url = "github:u-quark/vty?ref=gg";
       flake = false;
     };
     yesodweb-authenticate = {
