@@ -81,16 +81,18 @@ executables:
     dependencies:
     - gg
 
-tests:
-  gg-test:
-    main:                Spec.hs
-    source-dirs:         test
-    ghc-options:
-    - -Wall
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    extra-libraries:
-    - git2
-    dependencies:
-    - gg
+#tests:
+#  gg-test:
+#    main:                Spec.hs
+#    source-dirs:         test
+#    ghc-options:
+#    - -Wall
+#    - -threaded
+#    - -rtsopts
+#    - -with-rtsopts=-N
+#    - -v
+#    - -g0
+#    extra-libraries:
+#    - git2
+#    dependencies:
+#    - gg

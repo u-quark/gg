@@ -9,9 +9,9 @@ with pkgs;
 stdenv.mkDerivation {
   name = "gg-haskell-base16-schemes";
 
-  src = stdenv.lib.sourceByRegex ../base16-haskell-template [".*"];
+  src = ../base16-haskell-template;
 
-  buildInputs = [ base16-schemes pybase16-builder ];
+  buildInputs = [ pybase16-builder ];
   buildPhase = ''
     for scheme in ${base16-schemes}/*yaml; do
         scheme_name=$(basename $scheme)

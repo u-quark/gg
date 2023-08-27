@@ -14,11 +14,6 @@ self: super:
       nativeBuildInputs = [ pkgs.binutils ];
     }
   );
-  # We cannot override regular ncurses because all the tools
-  # ghc etc depend on this and then nothing works!
-  static-ncurses = super.ncurses.override {
-    enableStatic = true;
-  };
   libgit2 = super.libgit2.overrideAttrs (old: {
     src = inputs.libgit2;
     version = inputs.libgit2.rev;
@@ -36,6 +31,8 @@ self: super:
         ADDLIB ${self.openssl.out}/lib/libssl.a
         ADDLIB ${self.openssl.out}/lib/libcrypto.a
         ADDLIB ${self.http-parser}/lib/libhttp_parser.a
+        ADDLIB ${self.pcre_static.out}/lib/libpcre.a
+        ADDLIB ${self.pcre_static.out}/lib/libpcreposix.a
         SAVE
         END
       EOM

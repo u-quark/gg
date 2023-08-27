@@ -1,22 +1,5 @@
 {
   "nodes": {
-    "MissingH": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1557866336,
-        "narHash": "sha256-SOB1gVWp23y90s3mts3YmZidNpRgsCYijiJ4whU945M=",
-        "owner": "haskell-hvr",
-        "repo": "missingh",
-        "rev": "6581653b3a60f5343e631ed14223c8db462e96e3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "haskell-hvr",
-        "ref": "v1.4.2.0",
-        "repo": "missingh",
-        "type": "github"
-      }
-    },
     "base16-schemes": {
       "flake": false,
       "locked": {
@@ -84,84 +67,63 @@
         "type": "github"
       }
     },
-    "nh2-nixpkgs": {
-      "flake": false,
+    "nixpkgs": {
       "locked": {
-        "lastModified": 1572803313,
-        "narHash": "sha256-3m6CD1TOrNF8xTbPjruUFP4PBDhzy+6/ru92Fwow2vI=",
-        "owner": "nh2",
+        "lastModified": 1689277352,
+        "narHash": "sha256-dhriG/Uq73gwdNuCbjxEnFD60DyAuIH1YAj5rERrHIM=",
+        "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "11aa987ea5b5a593c9ca7a38b391804959f905e5",
+        "rev": "9e49f8f1f37bc906cda1adb33064c325d760819a",
         "type": "github"
       },
       "original": {
-        "owner": "nh2",
+        "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "11aa987ea5b5a593c9ca7a38b391804959f905e5",
+        "rev": "9e49f8f1f37bc906cda1adb33064c325d760819a",
         "type": "github"
       }
     },
     "root": {
       "inputs": {
-        "MissingH": "MissingH",
         "base16-schemes": "base16-schemes",
         "brick": "brick",
         "flake-compat": "flake-compat",
         "libgit2": "libgit2",
-        "nh2-nixpkgs": "nh2-nixpkgs",
+        "nixpkgs": "nixpkgs",
         "static-haskell": "static-haskell",
-        "vty": "vty",
-        "yesodweb-authenticate": "yesodweb-authenticate"
+        "vty": "vty"
       }
     },
     "static-haskell": {
       "flake": false,
       "locked": {
-        "lastModified": 1572807435,
-        "narHash": "sha256-zEMyTsVevC7AhKJPKpz8O4xXCO9PbsMxbLp3EDpY0yM=",
+        "lastModified": 1689279840,
+        "narHash": "sha256-0xZIgywfj+XRKXPISxVz/HS+cwtiJmql/LKrlMEhwcE=",
         "owner": "nh2",
         "repo": "static-haskell-nix",
-        "rev": "e3823be4caba6917c7c9f9dde9bece8ed8a4179b",
+        "rev": "88f1e2d57e3f4cd6d980eb3d8f99d5e60040ad54",
         "type": "github"
       },
       "original": {
         "owner": "nh2",
         "repo": "static-haskell-nix",
-        "rev": "e3823be4caba6917c7c9f9dde9bece8ed8a4179b",
         "type": "github"
       }
     },
     "vty": {
       "flake": false,
       "locked": {
-        "lastModified": 1689512592,
-        "narHash": "sha256-f+poPfxJcqdv09QftWFOp4Tdf9iSapT2EBp7NZKRsH0=",
+        "lastModified": 1697979126,
+        "narHash": "sha256-um/v1bufLeVq8OKOZL/lAb3pshR+uQ4d8MMiLj/o3P4=",
         "owner": "u-quark",
         "repo": "vty",
-        "rev": "7fd0d7de00b77af6cab8b95e7c11a49b19bdc881",
+        "rev": "781fff10814412760e657ca1add131a8b2774b6a",
         "type": "github"
       },
       "original": {
         "owner": "u-quark",
         "ref": "gg",
         "repo": "vty",
-        "type": "github"
-      }
-    },
-    "yesodweb-authenticate": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1573918230,
-        "narHash": "sha256-tBNgn5Q7AEC8rY7rfxreepPP3iCII/clo+0mIYGivwY=",
-        "owner": "yesodweb",
-        "repo": "authenticate",
-        "rev": "b16d342db7b1a7f88b613d628ee5093305b50a62",
-        "type": "github"
-      },
-      "original": {
-        "owner": "yesodweb",
-        "ref": "authenticate-1.3.5",
-        "repo": "authenticate",
         "type": "github"
       }
     }

@@ -108,7 +108,7 @@ handleEvent s (AppEvent S.Tick) = tickEventHandler (s ^. field @"timers") s
 handleEvent s _ = continue s
 
 handleScrolling :: S.State -> V.Event -> EventM S.Name (Next S.State)
-handleScrolling s@S.State {openCommit = Just _, ..} ev = do
+handleScrolling s@S.State {openCommit = Just _} ev = do
   handleOpenCommitScrolling ev
   continue s
 handleScrolling s@S.State {openCommit = Nothing} ev = handleCommitsListScrolling s ev

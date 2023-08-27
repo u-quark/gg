@@ -1,16 +1,17 @@
 { inputs }:
 
 let
-  ghc = "ghc881";
-  pkgs = import inputs.nh2-nixpkgs { system = "x86_64-linux"; };
+  ghc = "ghc962";
+  pkgs = import inputs.nixpkgs { system = "x86_64-linux"; };
   static-pkgs-overlay = import ./static-pkgs-overlay.nix {
     inherit inputs;
     inherit pkgs;
   };
   haskell-pkgs-overlay = import ./haskell-pkgs-overlay.nix {
     inherit inputs;
-    haskellLib = pkgs.haskell.lib;
-    callCabal2nix = pkgs.haskell.packages."${ghc}".callCabal2nix;
+    lib = pkgs.lib;
+    haskellLib = pkgs.pkgsMusl.haskell.lib;
+    callCabal2nix = pkgs.pkgsMusl.haskell.packages."${ghc}".callCabal2nix;
   };
   haskellPkgsExtend = hp: f: hp.override (oldArgs: {
     overrides = pkgs.lib.composeExtensions (oldArgs.overrides or (_: _: {})) f;
@@ -32,18 +33,11 @@ let
     pybase16-builder = tools.pybase16-builder;
     base16-schemes = inputs.base16-schemes;
   };
-  gg = static-haskell.haskellPackagesWithLibsReadyForStaticLinking.callPackage (import ./gg.nix) {
-    ncurses = patched-pkgs.pkgsMusl.static-ncurses;
-    zlib = patched-pkgs.pkgsMusl.zlib;
+  gg = static-haskell.haskellPackages.callPackage (import ./gg.nix) {
     inherit haskell-base16-schemes;
+    MissingH = static-haskell.pkgsWithStaticHaskellBinaries.haskellPackages.MissingH_1_6_0_0;
   };
-  devShell = pkgs.mkShell {
-    buildInputs = [
-      static-haskell.haskellPackagesWithLibsReadyForStaticLinking.ghc
-      static-haskell.haskellPackagesWithLibsReadyForStaticLinking.Cabal_3_0_0_0
-      static-haskell.haskellPackagesWithLibsReadyForStaticLinking.cabal-install
-    ];
-  };
+  devShell = pkgs.mkShell { nativeBuildInputs = gg.nativeBuildInputs; };
 in
 {
   inherit gg;

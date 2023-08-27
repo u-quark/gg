@@ -28,6 +28,10 @@ library:
   - -dcore-lint
 ```
 
+To build with nix (using workers):
+
+`nix-build --show-trace --max-jobs 0`
+
 To debug the GHC runtime (scheduler, gc, capabilities):
 
 `+RTS -N -Dg -DG -Ds -Di -RTS`
@@ -43,6 +47,30 @@ To get the binary before it is striped from it's debugging information in nix:
  * Call nix with:
     > NIX_PATH='' nix-build -K --show-trace
    and it will keep and print the build directory.
+
+To inspect a derivation:
+
+```
+> nix repl
+nix-repl> d = import ./nix/default.nix { inputs = (import ./default.nix).inputs; }
+nix-repl> d.unmodified_static-haskell.haskellPackages.callPackage
+```
+
+alternatively:
+
+`nix repl --extra-experimental-features repl-flake .#`
+
+To debug a derivation:
+
+`nix show-derivation /nix/store/hngwpk25qnj35r6pkdb3zy5mnhlrfzrf-test-0.1.0.0.drv`
+
+To update a flake input:
+
+`nix flake lock --update-input vty`
+
+To push to cachix cache:
+
+`nix-build --show-trace --max-jobs 0 | cachix push gg`
 
 Alternatives
 ============
@@ -119,4 +147,3 @@ https://discourse.nixos.org/t/static-libraries-discarded/991
 https://sourceware.org/binutils/docs/binutils/nm.html
 https://renenyffenegger.ch/notes/development/languages/C-C-plus-plus/GCC/create-libraries/index
 https://github.com/NixOS/nixpkgs/issues/36883
-
