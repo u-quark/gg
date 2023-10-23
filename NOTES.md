@@ -72,6 +72,10 @@ To push to cachix cache:
 
 `nix-build --show-trace --max-jobs 0 | cachix push gg`
 
+alternatively:
+
+`nix-store -qR --include-outputs $(nix-store -qd $(nix-build --show-trace --max-jobs 0)) | grep -v '\.drv$' | sort | uniq | cachix push gg`
+
 Alternatives
 ============
 
