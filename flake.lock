@@ -68,11 +68,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1698096171,
-        "narHash": "sha256-kg1L47Nw447Z1yUky0MqopEmfm2kz7U8FvSsfS7c0Os=",
+        "lastModified": 1698165151,
+        "narHash": "sha256-YozCkD/Z2kS5BpE7R3bT48fOzaDU3B6wsi38TV1rKYU=",
         "owner": "u-quark",
         "repo": "nixpkgs",
-        "rev": "1d249b79f66f2a2f07508c154f708a5a7e4c1a8f",
+        "rev": "5425b6a643a9c17f3f7ed535ef3c4dc5e2b80179",
         "type": "github"
       },
       "original": {
@@ -96,15 +96,16 @@
     "static-haskell": {
       "flake": false,
       "locked": {
-        "lastModified": 1689279840,
-        "narHash": "sha256-0xZIgywfj+XRKXPISxVz/HS+cwtiJmql/LKrlMEhwcE=",
-        "owner": "nh2",
+        "lastModified": 1698167192,
+        "narHash": "sha256-kXqKZFwjsORoHzffaX4ES5ZsI7xhYDJB70RUMUkQuvs=",
+        "owner": "u-quark",
         "repo": "static-haskell-nix",
-        "rev": "88f1e2d57e3f4cd6d980eb3d8f99d5e60040ad54",
+        "rev": "f0e821d443a7df1ee99ef23a0a000306aa053738",
         "type": "github"
       },
       "original": {
-        "owner": "nh2",
+        "owner": "u-quark",
+        "ref": "gg",
         "repo": "static-haskell-nix",
         "type": "github"
       }

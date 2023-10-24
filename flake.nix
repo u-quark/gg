@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:u-quark/nixpkgs?ref=gg";
     static-haskell = {
-      url = "github:nh2/static-haskell-nix";
+      url = "github:u-quark/static-haskell-nix?ref=gg";
       flake = false;
     };
     libgit2 = {

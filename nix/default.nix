@@ -1,7 +1,7 @@
 { inputs }:
 
 let
-  ghc = "ghc962";
+  ghc = "ghc963";
   pkgs = import inputs.nixpkgs { system = "x86_64-linux"; };
   static-pkgs-overlay = import ./static-pkgs-overlay.nix {
     inherit inputs;
