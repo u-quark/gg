@@ -2,13 +2,13 @@
   description = "gg - git (G)UI";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs?rev=9e49f8f1f37bc906cda1adb33064c325d760819a";
+    nixpkgs.url = "github:u-quark/nixpkgs?ref=gg";
     static-haskell = {
       url = "github:nh2/static-haskell-nix";
       flake = false;
     };
     libgit2 = {
-      url = "github:libgit2/libgit2?ref=v1.6.4";
+      url = "github:libgit2/libgit2?ref=v1.7.1";
       flake = false;
     };
     vty = {
@@ -20,7 +20,7 @@
       flake = false;
     };
     base16-schemes = {
-      url = "github:tinted-theming/base16-schemes?rev=9a4002f78dd1094c123169da243680b2fda3fe69";
+      url = "github:tinted-theming/base16-schemes";
       flake = false;
     };
     flake-compat = {

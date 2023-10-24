@@ -35,7 +35,6 @@ let
   };
   gg = static-haskell.haskellPackages.callPackage (import ./gg.nix) {
     inherit haskell-base16-schemes;
-    MissingH = static-haskell.pkgsWithStaticHaskellBinaries.haskellPackages.MissingH_1_6_0_0;
   };
   devShell = pkgs.mkShell { nativeBuildInputs = gg.nativeBuildInputs; };
 in
