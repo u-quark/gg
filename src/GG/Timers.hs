@@ -15,6 +15,7 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
+
 module GG.Timers
   ( Timers
   , initTimers
@@ -70,12 +71,12 @@ initTimers tickEvent resolution bChan = do
       B.writeBChan bChan tickEvent
       threadDelay resolution
 
-tickEventHandler ::
-     (Ord name, Eq name, Ord timerName) => Timers state name timerName -> state -> B.EventM name (B.Next state)
-tickEventHandler timers s = do
+tickEventHandler :: (Ord a, Ord timerName) => Timers s a timerName -> B.EventM a s ()
+tickEventHandler timers = do
+  s <- B.get
   (s', ns') <- liftIO $ timersHandler timers s
+  B.put s'
   mapM_ B.invalidateCacheEntry ns'
-  B.continue s'
 
 timersHandler :: (Ord name, Eq name, Ord timerName) => Timers state name timerName -> state -> IO (state, [name])
 timersHandler (Timers timersMVar blocker) state = do

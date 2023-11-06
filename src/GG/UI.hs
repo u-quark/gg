@@ -15,11 +15,13 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
+
 {-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE BlockArguments   #-}
 
 module GG.UI
   ( main
@@ -28,8 +30,8 @@ module GG.UI
 import           Brick                  hiding (attrMap, attrName)
 import           Brick.BChan            (BChan)
 import           Brick.Widgets.List
-import           Control.Lens           (element, mapMOf, mapped, set, to, (^.),
-                                         (^?), (^?!), _2)
+import           Control.Lens           ((^.), (^?), (.=), (?=),
+                                         _2, element, to, set, use, mapped)
 import           Control.Monad          (foldM, void, when)
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Reader   (Reader, runReader, ask)
@@ -81,130 +83,131 @@ app =
 getAttrMap_ :: S.State -> AttrMap
 getAttrMap_ s = getAttrMap $ s ^. field @"config" . field @"ui" . field @"theme"
 
-startEvent :: S.State -> EventM S.Name S.State
-startEvent s = do
-  let attrMap = getAttrMap_ s
+startEvent :: S.ModifyState ()
+startEvent = do
+  state <- get
+  let attrMap = getAttrMap_ state
   let attr = attrMapLookup Attr.defaultAttr attrMap
   let bgC_ = case V.attrBackColor attr of
                 V.SetTo bgC -> bgC
                 _ -> error "We should always have a defaultAttr color"
   vty <- getVtyHandle
   liftIO $ V.setBackgroundColor (V.outputIface vty) bgC_
-  return s
 
-handleEvent :: S.State -> BrickEvent S.Name S.Event -> EventM S.Name (Next S.State)
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'q') [])) = closeAction s
-handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = closeAction s
-handleEvent s (VtyEvent (V.EvKey V.KEnter [])) = openCommitAction s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'K') [])) = doRebaseAction A.MoveUpA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'J') [])) = doRebaseAction A.MoveDownA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'S') [])) = doRebaseAction A.SquashA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'F') [])) = doRebaseAction A.FixupA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'D') [])) = doRebaseAction A.DeleteA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'Z') [])) = doAction A.UndoA s
-handleEvent s (VtyEvent (V.EvKey (V.KChar 'R') [])) = doAction A.RedoA s
-handleEvent s (VtyEvent ev) = handleScrolling s ev
-handleEvent s (AppEvent S.Tick) = tickEventHandler (s ^. field @"timers") s
-handleEvent s _ = continue s
+type EventHandler event = event -> S.ModifyState ()
 
-handleScrolling :: S.State -> V.Event -> EventM S.Name (Next S.State)
-handleScrolling s@S.State {openCommit = Just _} ev = do
-  handleOpenCommitScrolling ev
-  continue s
-handleScrolling s@S.State {openCommit = Nothing} ev = handleCommitsListScrolling s ev
+handleEvent :: EventHandler (BrickEvent S.Name S.Event)
+handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = closeAction
+handleEvent (VtyEvent (V.EvKey V.KEsc [])) = closeAction
+handleEvent (VtyEvent (V.EvKey V.KEnter [])) = openCommitAction
+handleEvent (VtyEvent (V.EvKey (V.KChar 'K') [])) = handleRebaseAction A.MoveUpA
+handleEvent (VtyEvent (V.EvKey (V.KChar 'J') [])) = handleRebaseAction A.MoveDownA
+handleEvent (VtyEvent (V.EvKey (V.KChar 'S') [])) = handleRebaseAction A.SquashA
+handleEvent (VtyEvent (V.EvKey (V.KChar 'F') [])) = handleRebaseAction A.FixupA
+handleEvent (VtyEvent (V.EvKey (V.KChar 'D') [])) = handleRebaseAction A.DeleteA
+handleEvent (VtyEvent (V.EvKey (V.KChar 'Z') [])) = handleAction A.UndoA
+handleEvent (VtyEvent (V.EvKey (V.KChar 'R') [])) = handleAction A.RedoA
+handleEvent (VtyEvent ev) = handleScrolling ev
+handleEvent (AppEvent S.Tick) = do
+  timers <- use (field @"timers")
+  tickEventHandler timers
+handleEvent _ = pure ()
 
-handleCommitsListScrolling :: S.State -> V.Event -> EventM S.Name (Next S.State)
-handleCommitsListScrolling s (V.EvKey (V.KChar 'G') []) = continue s -- disable going to the end of the list
-handleCommitsListScrolling s (V.EvKey V.KEnd []) = continue s
-handleCommitsListScrolling s ev = do
-  s' <- liftIO $ checkNeedsMoreCommits s
-  s'' <- mapMOf (field @"commitList") (handleListEventVi handleListEvent ev) s'
-  continue s''
+handleScrolling :: EventHandler V.Event
+handleScrolling ev = do
+  openCommitM <- use (field @"openCommit")
+  if isJust openCommitM
+    then handleOpenCommitScrolling ev
+    else handleCommitsListScrolling ev
 
-handleOpenCommitScrolling :: V.Event -> EventM S.Name ()
-handleOpenCommitScrolling e = action vps
+handleCommitsListScrolling :: EventHandler V.Event
+handleCommitsListScrolling (V.EvKey (V.KChar 'G') []) = pure () -- disable going to the end of the list
+handleCommitsListScrolling (V.EvKey V.KEnd []) = pure ()
+handleCommitsListScrolling ev = do
+  checkNeedsMoreCommits
+  zoom (field @"commitList") (handleListEventVi handleListEvent ev)
+
+handleOpenCommitScrolling :: EventHandler V.Event
+handleOpenCommitScrolling e = case e of
+  V.EvKey V.KUp []                -> flip vScrollBy (-1) vps
+  V.EvKey V.KDown []              -> flip vScrollBy 1 vps
+  V.EvKey V.KHome []              -> vScrollToBeginning vps
+  V.EvKey V.KEnd []               -> vScrollToEnd vps
+  V.EvKey V.KPageDown []          -> flip vScrollPage Down vps
+  V.EvKey V.KPageUp []            -> flip vScrollPage Up vps
+  V.EvKey (V.KChar 'k') []        -> flip vScrollBy (-1) vps
+  V.EvKey (V.KChar 'j') []        -> flip vScrollBy 1 vps
+  V.EvKey (V.KChar 'g') []        -> vScrollToBeginning vps
+  V.EvKey (V.KChar 'G') []        -> vScrollToEnd vps
+  V.EvKey (V.KChar 'f') [V.MCtrl] -> flip vScrollPage Down vps
+  V.EvKey (V.KChar 'b') [V.MCtrl] -> flip vScrollPage Up vps
+  _                               -> pure ()
   where
     vps = viewportScroll S.CommitDiffVP
-    action =
-      case e of
-        V.EvKey V.KUp []                -> flip vScrollBy (-1)
-        V.EvKey V.KDown []              -> flip vScrollBy 1
-        V.EvKey V.KHome []              -> vScrollToBeginning
-        V.EvKey V.KEnd []               -> vScrollToEnd
-        V.EvKey V.KPageDown []          -> flip vScrollPage Down
-        V.EvKey V.KPageUp []            -> flip vScrollPage Up
-        V.EvKey (V.KChar 'k') []        -> flip vScrollBy (-1)
-        V.EvKey (V.KChar 'j') []        -> flip vScrollBy 1
-        V.EvKey (V.KChar 'g') []        -> vScrollToBeginning
-        V.EvKey (V.KChar 'G') []        -> vScrollToEnd
-        V.EvKey (V.KChar 'f') [V.MCtrl] -> flip vScrollPage Down
-        V.EvKey (V.KChar 'b') [V.MCtrl] -> flip vScrollPage Up
-        _                               -> const $ pure ()
 
-checkNeedsMoreCommits :: S.State -> IO S.State
-checkNeedsMoreCommits s =
-  if ((s ^. field @"commitList" . listElementsL . to length) -
-      (s ^. field @"commitList" . listSelectedL . to (fromMaybe 0))) <
-     500
-    then do
-      (moreCommits, contCommit') <- R.readNCommits 500 (s ^. field @"contCommit")
-      moreCommitsState <- mapM R.readCommit moreCommits
-      pure $ S.addMoreCommits moreCommitsState contCommit' s
-    else pure s
+checkNeedsMoreCommits :: S.ModifyState ()
+checkNeedsMoreCommits = do
+  currentSize <- use (field @"commitList" . listElementsL . to length)
+  selectedIx <- use (field @"commitList" . listSelectedL . to (fromMaybe 0))
+  when (currentSize - selectedIx < 500) do
+    contCommit <- use (field @"contCommit")
+    (moreCommits, contCommit') <- liftIO $ fetchMoreCommits 500 contCommit
+    S.addMoreCommits moreCommits contCommit'
 
-handleActionSuccessReload :: S.State -> Int -> A.ActionSummary String -> IO S.State
-handleActionSuccessReload s newPos _summary = do
-  (head, headCommit) <- R.readRepoState $ s ^. field @"repository"
-  (tailCommits, contCommit') <- R.readNCommits (newPos + 500) headCommit
-  moreCommitsState <- mapM R.readCommit (headCommit : tailCommits)
-  pure $
-    (S.updateRepoState contCommit' head moreCommitsState . S.updateCommitsPos newPos .
-     set (field @"notification") Nothing)
-      s
+fetchMoreCommits :: Int -> G.Commit -> IO ([S.Commit], G.Commit)
+fetchMoreCommits numCommits contCommit = do
+  (moreCommits, contCommit') <- R.readNCommits numCommits contCommit
+  moreCommitsState <- mapM R.readCommit moreCommits
+  pure (moreCommitsState, contCommit')
 
-handleActionFailure :: S.State -> A.ActionFailure -> IO S.State
-handleActionFailure s failure = do
-  let s' = set (field @"notification") (Just (S.ActionFailure failure, 1)) s
-  addAnimation
-    (s ^. field @"timers")
+handleActionSuccessReload :: Int -> A.ActionSummary String -> S.ModifyState ()
+handleActionSuccessReload newPos _summary = do
+  repo <- use (field @"repository")
+  (head, headCommit) <- liftIO $ R.readRepoState repo
+  (moreCommitsState, contCommit) <- liftIO $ fetchMoreCommits (newPos + 500) headCommit
+  headCommit' <- liftIO $ R.readCommit headCommit
+  S.updateRepoState contCommit head (headCommit' : moreCommitsState)
+  S.updateCommitsPos newPos
+  field @"notification" .= Nothing
+
+handleActionFailure :: A.ActionFailure -> S.ModifyState ()
+handleActionFailure failure = do
+  field @"notification" ?= (S.ActionFailure failure, 1)
+  timers <- use (field @"timers")
+  liftIO $ addAnimation
+    timers
     S.NotificationT
     (failureNotificationDuration failure)
     notificationAnimation
     notificationAnimationEnd
-  pure s'
 
-handleActionWarning :: S.State -> A.ActionWarning -> IO S.State
-handleActionWarning s warning = do
-  let s' = set (field @"notification") (Just (S.ActionWarning warning, 1)) s
-  addAnimation
-    (s ^. field @"timers")
+handleActionWarning :: A.ActionWarning -> S.ModifyState ()
+handleActionWarning warning = do
+  field @"notification" ?= (S.ActionWarning warning, 1)
+  timers <- use (field @"timers")
+  liftIO $ addAnimation
+    timers
     S.NotificationT
     (warningNotificationDuration warning)
     notificationAnimation
     notificationAnimationEnd
-  pure s'
 
-handleAction :: S.State -> A.Action -> IO S.State
-handleAction s action = do
-  result <- A.doAction (s ^. field @"repository") action
+handleAction :: A.Action -> S.ModifyState ()
+handleAction action = do
+  repo <- use (field @"repository")
+  result <- liftIO $ A.doAction repo action
   case result of
     A.Success newPos summary maybeWarning -> do
-      s' <- handleActionSuccessReload s newPos summary
+      handleActionSuccessReload newPos summary
       case maybeWarning of
-        Nothing      -> pure s'
-        Just warning -> handleActionWarning s' warning
-    A.Failure failure -> handleActionFailure s failure
+        Nothing      -> pure ()
+        Just warning -> handleActionWarning warning
+    A.Failure failure -> handleActionFailure failure
 
-doAction :: A.Action -> S.State -> EventM S.Name (Next S.State)
-doAction action s = do
-  s' <- liftIO $ handleAction s action
-  continue s'
-
-doRebaseAction :: A.RebaseAction -> S.State -> EventM S.Name (Next S.State)
-doRebaseAction rebaseAction s = do
-  let pos = s ^. field @"commitList" . listSelectedL . to (fromMaybe 0)
-  s' <- liftIO $ handleAction s (A.RebaseAction pos rebaseAction)
-  continue s'
+handleRebaseAction :: A.RebaseAction -> S.ModifyState ()
+handleRebaseAction rebaseAction = do
+  pos <- use $ field @"commitList" . listSelectedL . to (fromMaybe 0)
+  handleAction $ A.RebaseAction pos rebaseAction
 
 failureNotificationDuration :: A.ActionFailure -> Duration
 failureNotificationDuration (A.RebaseConflict _ _)  = 5
@@ -314,17 +317,16 @@ drawNotification notificationM = do
                 then icon
                 else ""
 
-openCommitAction :: S.State -> EventM S.Name (Next S.State)
-openCommitAction s = do
-  s' <- liftIO $ maybe (pure s) openCommitAction' (s ^. (field @"commitList" . listSelectedL))
+openCommitAction :: S.ModifyState ()
+openCommitAction = do
+  repo <- use (field @"repository")
+  selectedIx <- use (field @"commitList" . listSelectedL . to fromJust)
+  oid <- use (S.commitL selectedIx . field @"oid")
+  (diffStats, diffInfo_) <- liftIO $ R.readCommitDiff repo oid
+  S.openCommitDetails selectedIx (diffStats, diffInfo_)
   let vps = viewportScroll S.CommitDiffVP
   vScrollToBeginning vps
   invalidateCacheEntry S.CommitDiffUI
-  continue s'
-  where
-    openCommitAction' ix = do
-      (diffStats, diffInfo_) <- R.readCommitDiff (s ^. field @"repository") (s ^?! (S.commitL ix . field @"oid"))
-      pure $ S.openCommitDetails ix (diffStats, diffInfo_) s
 
 drawSignatures :: S.Commit -> UI
 drawSignatures c = pure $ foldr1 (<=>) cases
@@ -694,11 +696,12 @@ drawDiffStats c =
   where
     diffStats = c ^. field @"diffStats"
 
-closeAction :: S.State -> EventM S.Name (Next S.State)
-closeAction s =
-  if isJust (s ^. field @"openCommit")
-    then continue $ S.closeCommitDetails s
-    else halt s
+closeAction :: S.ModifyState ()
+closeAction = do
+  openCommitM <- use (field @"openCommit")
+  if isJust openCommitM
+    then S.closeCommitDetails
+    else halt
 
 withAnimAttr :: AttrName -> AttrMap -> Double -> Widget S.Name -> Widget S.Name
 withAnimAttr attrName attrMap = withFadeout $ attrMapLookup attrName attrMap
@@ -737,11 +740,15 @@ easeOut t =
     sustain = 0.8
     easeExp = 0.7
 
+buildVty :: IO V.Vty
+buildVty = do
+  vty <- V.mkVty V.defaultConfig
+  return vty
+
 main :: BChan S.Event -> S.State -> IO ()
 main bChan state = do
   terminfoDirs <- lookupEnv "TERMINFO_DIRS"
   when (isNothing terminfoDirs) (setEnv "TERMINFO_DIRS" "/etc/terminfo:/lib/terminfo:/usr/share/terminfo")
-  let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
   void $ customMain initialVty buildVty (Just bChan) app state
   V.resetBackgroundColor (V.outputIface initialVty)

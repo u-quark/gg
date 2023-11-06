@@ -15,15 +15,14 @@
   You should have received a copy of the GNU General Public License
   along with gg.  If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE OverloadedStrings #-}
 
 module GG.UI.Attrs where
 
-import           Brick              (AttrName)
+import           Brick              (AttrName, attrName)
 import           Brick.Widgets.List (listAttr, listSelectedAttr)
 
 defaultAttr :: AttrName
-defaultAttr = "default"
+defaultAttr = attrName "default"
 
 list :: AttrName
 list = listAttr
@@ -32,85 +31,85 @@ listSelected :: AttrName
 listSelected = listSelectedAttr
 
 oid :: AttrName
-oid = listAttr <> "oid"
+oid = listAttr <> attrName "oid"
 
 author :: AttrName
-author = listAttr <> "author"
+author = listAttr <> attrName "author"
 
 date :: AttrName
-date = listAttr <> "date"
+date = listAttr <> attrName "date"
 
 statusBar :: AttrName
-statusBar = "status_bar"
+statusBar = attrName "status_bar"
 
 statusBranch :: AttrName
-statusBranch = statusBar <> "status_branch"
+statusBranch = statusBar <> attrName "status_branch"
 
 notification :: AttrName
-notification = statusBar <> "notification"
+notification = statusBar <> attrName "notification"
 
 notificationEmphasis :: AttrName
-notificationEmphasis = notification <> "emphasis"
+notificationEmphasis = notification <> attrName "emphasis"
 
 notificationFailure :: AttrName
-notificationFailure = notification <> "failure"
+notificationFailure = notification <> attrName "failure"
 
 commitSummary :: AttrName
-commitSummary = "commit_summary"
+commitSummary = attrName "commit_summary"
 
 fullOid :: AttrName
-fullOid = statusBranch <> "oid"
+fullOid = statusBranch <> attrName "oid"
 
 statsFilesModified :: AttrName
-statsFilesModified = statusBranch <> "modifications"
+statsFilesModified = statusBranch <> attrName "modifications"
 
 statsInsertions :: AttrName
-statsInsertions = statusBranch <> "additions"
+statsInsertions = statusBranch <> attrName "additions"
 
 statsDeletions :: AttrName
-statsDeletions = statusBranch <> "deletions"
+statsDeletions = statusBranch <> attrName "deletions"
 
 fileDelta :: AttrName
-fileDelta = "file_delta"
+fileDelta = attrName "file_delta"
 
 fileAdded :: AttrName
-fileAdded = fileDelta <> "added"
+fileAdded = fileDelta <> attrName "added"
 
 fileDeleted :: AttrName
-fileDeleted = fileDelta <> "deleted"
+fileDeleted = fileDelta <> attrName "deleted"
 
 fileModified :: AttrName
-fileModified = fileDelta <> "modified"
+fileModified = fileDelta <> attrName "modified"
 
 fileRenamed :: AttrName
-fileRenamed = fileDelta <> "renamed"
+fileRenamed = fileDelta <> attrName "renamed"
 
 fileCopied :: AttrName
-fileCopied = fileDelta <> "copied"
+fileCopied = fileDelta <> attrName "copied"
 
 diff :: AttrName
-diff = "diff"
+diff = attrName "diff"
 
 diffHeader :: AttrName
-diffHeader = diff <> "header"
+diffHeader = diff <> attrName "header"
 
 diffAddedLine :: AttrName
-diffAddedLine = diff <> "added_line"
+diffAddedLine = diff <> attrName "added_line"
 
 diffDeletedLine :: AttrName
-diffDeletedLine = diff <> "deleted_line"
+diffDeletedLine = diff <> attrName "deleted_line"
 
 diffAddedText :: AttrName
-diffAddedText = diff <> "added_text"
+diffAddedText = diff <> attrName "added_text"
 
 diffDeletedText :: AttrName
-diffDeletedText = diff <> "deleted_text"
+diffDeletedText = diff <> attrName "deleted_text"
 
 diffSpecialText :: AttrName
-diffSpecialText = diff <> "special_text"
+diffSpecialText = diff <> attrName "special_text"
 
 diffLineNumber :: AttrName
-diffLineNumber = diff <> "line_number"
+diffLineNumber = diff <> attrName "line_number"
 
 diffLineNumberSep :: AttrName
-diffLineNumberSep = diff <> "line_number_separator"
+diffLineNumberSep = diff <> attrName "line_number_separator"

@@ -24,9 +24,11 @@
 
 module GG.State where
 
+import           Brick                        (EventM)
 import qualified Brick.Widgets.List           as L
-import           Control.Lens                 (Traversal', ix, over, set, (&),
-                                               (.~), (?~), (^?), (^?!), _Just)
+import           Control.Lens                 (Lens', (.=), (%=), (?=),
+                                               ix, singular, _Just, use, preuse)
+import           Control.Monad                (forM_)
 import           Data.Generics.Product.Fields (field)
 import           Data.Time                    (ZonedTime)
 import qualified Data.Vector                  as Vec
@@ -102,32 +104,35 @@ initState :: Config -> G.Repository -> G.Commit -> Reference -> [Commit] -> Time
 initState config repository contCommit head l timers =
   State {commitList=(L.list CommitListUI (Vec.fromList l) 1), openCommit=Nothing, notification=Nothing, ..}
 
-updateRepoState :: G.Commit -> Reference -> [Commit] -> State -> State
-updateRepoState commit head_ l =
-  set (field @"commitList" . L.listElementsL) (Vec.fromList l) .
-  set (field @"contCommit") commit . set (field @"head") head_
+type ModifyState a = EventM Name State a
 
-addMoreCommits :: [Commit] -> G.Commit -> State -> State
-addMoreCommits moreCommits newContCommit =
-  over (field @"commitList" . L.listElementsL) (Vec.++ Vec.fromList moreCommits) .
-  set (field @"contCommit") newContCommit
+updateRepoState :: G.Commit -> Reference -> [Commit] -> ModifyState ()
+updateRepoState commit head_ l = do
+  field @"commitList" . L.listElementsL .= Vec.fromList l
+  field @"contCommit" .= commit
+  field @"head" .= head_
 
-updateCommitsPos :: Int -> State -> State
-updateCommitsPos pos = set (field @"commitList" . L.listSelectedL) (Just pos)
+addMoreCommits :: [Commit] -> G.Commit -> ModifyState ()
+addMoreCommits moreCommits newContCommit = do
+  field @"commitList" . L.listElementsL %= flip (Vec.++) (Vec.fromList moreCommits)
+  field @"contCommit" .= newContCommit
 
-commitL :: Int -> Traversal' State Commit
-commitL i = field @"commitList" . L.listElementsL . ix i
+updateCommitsPos :: Int -> ModifyState ()
+updateCommitsPos pos = field @"commitList" . L.listSelectedL .= Just pos
 
-openCommitDetails :: Int -> (G.DiffStats, G.DiffInfo) -> State -> State
-openCommitDetails i (diffStats_, diffInfo_) state =
-  state' & commitL i .~ openCommit_ & field @"openCommit" ?~ OpenCommit i openCommit_ diffStats_ diffInfo_
-  where
-    openCommit_ = (state ^?! commitL i) & field @"open" .~ True
-    oldOpenCommitIxM = state ^? (field @"openCommit" . _Just . field @"openCommitIndex")
-    state' = maybe state (\i' -> state & (commitL i' . field @"open") .~ False) oldOpenCommitIxM
+commitL :: Int -> Lens' State Commit
+commitL i = field @"commitList" . L.listElementsL . singular (ix i)
 
-closeCommitDetails :: State -> State
-closeCommitDetails state =
-  maybe state (\i -> state & (commitL i . field @"open") .~ False) oldOpenCommitIxM & field @"openCommit" .~ Nothing
-  where
-    oldOpenCommitIxM = state ^? (field @"openCommit" . _Just . field @"openCommitIndex")
+openCommitDetails :: Int -> (G.DiffStats, G.DiffInfo) -> ModifyState ()
+openCommitDetails i (diffStats, diffInfo) = do
+  oldOpenCommitIxM <- preuse (field @"openCommit" . _Just . field @"openCommitIndex")
+  forM_ oldOpenCommitIxM (\i' -> commitL i' . field @"open" .= False)
+  commitL i . field @"open" .= True
+  openCommit <- use (commitL i)
+  field @"openCommit" ?= OpenCommit i openCommit diffStats diffInfo
+
+closeCommitDetails :: ModifyState ()
+closeCommitDetails = do
+  oldOpenCommitIxM <- preuse (field @"openCommit" . _Just . field @"openCommitIndex")
+  forM_ oldOpenCommitIxM (\i' -> commitL i' . field @"open" .= False)
+  field @"openCommit" .= Nothing

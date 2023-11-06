@@ -19,17 +19,16 @@
     "brick": {
       "flake": false,
       "locked": {
-        "lastModified": 1568395380,
-        "narHash": "sha256-9PW1k35HWAeKdAehGUmI5qCvUNj5op12EeCrPiH1RJ0=",
+        "lastModified": 1698178979,
+        "narHash": "sha256-tE56wo37xJW7KJOd1ynY+7TfsYiuxQGANH2HLvV1IcY=",
         "owner": "jtdaugherty",
         "repo": "brick",
-        "rev": "3d34ef115631700ab6d46088357f7e2ab13c424e",
+        "rev": "53d9b207e285a4819d7f8d05be46bcfa1d75c5e6",
         "type": "github"
       },
       "original": {
         "owner": "jtdaugherty",
         "repo": "brick",
-        "rev": "3d34ef115631700ab6d46088357f7e2ab13c424e",
         "type": "github"
       }
     },

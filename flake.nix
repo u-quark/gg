@@ -16,7 +16,7 @@
       flake = false;
     };
     brick = {
-      url = "github:jtdaugherty/brick?rev=3d34ef115631700ab6d46088357f7e2ab13c424e";
+      url = "github:jtdaugherty/brick";
       flake = false;
     };
     base16-schemes = {
