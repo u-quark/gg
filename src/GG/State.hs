@@ -41,6 +41,7 @@ import           Prelude                      hiding (head)
 
 data Event =
   Tick
+  deriving (Eq, Ord, Show)
 
 data Name
   = CommitListUI

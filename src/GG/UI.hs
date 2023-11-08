@@ -96,54 +96,84 @@ startEvent = do
 
 type EventHandler event = event -> S.ModifyState ()
 
-handleEvent :: EventHandler (BrickEvent S.Name S.Event)
-handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = closeAction
-handleEvent (VtyEvent (V.EvKey V.KEsc [])) = closeAction
-handleEvent (VtyEvent (V.EvKey V.KEnter [])) = openCommitAction
-handleEvent (VtyEvent (V.EvKey (V.KChar 'K') [])) = handleRebaseAction A.MoveUpA
-handleEvent (VtyEvent (V.EvKey (V.KChar 'J') [])) = handleRebaseAction A.MoveDownA
-handleEvent (VtyEvent (V.EvKey (V.KChar 'S') [])) = handleRebaseAction A.SquashA
-handleEvent (VtyEvent (V.EvKey (V.KChar 'F') [])) = handleRebaseAction A.FixupA
-handleEvent (VtyEvent (V.EvKey (V.KChar 'D') [])) = handleRebaseAction A.DeleteA
-handleEvent (VtyEvent (V.EvKey (V.KChar 'Z') [])) = handleAction A.UndoA
-handleEvent (VtyEvent (V.EvKey (V.KChar 'R') [])) = handleAction A.RedoA
-handleEvent (VtyEvent ev) = handleScrolling ev
+type Event = BrickEvent S.Name S.Event
+
+handleEvent :: EventHandler Event
 handleEvent (AppEvent S.Tick) = do
   timers <- use (field @"timers")
   tickEventHandler timers
-handleEvent _ = pure ()
+handleEvent e = do
+  handleKeyboardActions e
+  handleScrolling e
 
-handleScrolling :: EventHandler V.Event
-handleScrolling ev = do
+handleKeyboardActions :: EventHandler Event
+handleKeyboardActions (VtyEvent (V.EvKey key mods)) = case (key, mods) of
+    ((V.KChar 'q'), []) -> closeAction
+    (V.KEsc,        []) -> closeAction
+    (V.KEnter,      []) -> openCommitAction
+    ((V.KChar 'K'), []) -> handleRebaseAction A.MoveUpA
+    ((V.KChar 'J'), []) -> handleRebaseAction A.MoveDownA
+    ((V.KChar 'S'), []) -> handleRebaseAction A.SquashA
+    ((V.KChar 'F'), []) -> handleRebaseAction A.FixupA
+    ((V.KChar 'D'), []) -> handleRebaseAction A.DeleteA
+    ((V.KChar 'Z'), []) -> handleAction A.UndoA
+    ((V.KChar 'R'), []) -> handleAction A.RedoA
+    _ -> pure ()
+handleKeyboardActions _ = pure ()
+
+handleScrolling :: EventHandler Event
+handleScrolling e = do
   openCommitM <- use (field @"openCommit")
   if isJust openCommitM
-    then handleOpenCommitScrolling ev
-    else handleCommitsListScrolling ev
-
-handleCommitsListScrolling :: EventHandler V.Event
-handleCommitsListScrolling (V.EvKey (V.KChar 'G') []) = pure () -- disable going to the end of the list
-handleCommitsListScrolling (V.EvKey V.KEnd []) = pure ()
-handleCommitsListScrolling ev = do
-  checkNeedsMoreCommits
-  zoom (field @"commitList") (handleListEventVi handleListEvent ev)
-
-handleOpenCommitScrolling :: EventHandler V.Event
-handleOpenCommitScrolling e = case e of
-  V.EvKey V.KUp []                -> flip vScrollBy (-1) vps
-  V.EvKey V.KDown []              -> flip vScrollBy 1 vps
-  V.EvKey V.KHome []              -> vScrollToBeginning vps
-  V.EvKey V.KEnd []               -> vScrollToEnd vps
-  V.EvKey V.KPageDown []          -> flip vScrollPage Down vps
-  V.EvKey V.KPageUp []            -> flip vScrollPage Up vps
-  V.EvKey (V.KChar 'k') []        -> flip vScrollBy (-1) vps
-  V.EvKey (V.KChar 'j') []        -> flip vScrollBy 1 vps
-  V.EvKey (V.KChar 'g') []        -> vScrollToBeginning vps
-  V.EvKey (V.KChar 'G') []        -> vScrollToEnd vps
-  V.EvKey (V.KChar 'f') [V.MCtrl] -> flip vScrollPage Down vps
-  V.EvKey (V.KChar 'b') [V.MCtrl] -> flip vScrollPage Up vps
-  _                               -> pure ()
+    then handleViewportScrolling S.CommitDiffVP commit_diff_vps e
+    else handleCommitsListScrolling e
   where
-    vps = viewportScroll S.CommitDiffVP
+    commit_diff_vps = viewportScroll S.CommitDiffVP
+
+handleCommitsListScrolling :: EventHandler Event
+handleCommitsListScrolling (VtyEvent (V.EvKey (V.KChar 'G') [])) = pure () -- disable going to the end of the list
+handleCommitsListScrolling (VtyEvent (V.EvKey V.KEnd [])) = pure ()
+handleCommitsListScrolling e = do
+  checkNeedsMoreCommits
+  zoom (field @"commitList") do
+       handleListEventMouse S.CommitListUI (handleListEventVi handleListEvent) e
+
+handleListEventMouse :: (Foldable t, Splittable t, Ord n)
+                  => S.Name
+                  -> (V.Event -> EventM n (GenericList n t e) ())
+                  -> Event
+                  -> EventM n (GenericList n t e) ()
+handleListEventMouse name fallback e = do
+  case e of
+    MouseDown name' V.BScrollDown _ _ | name == name' -> modify listMoveDown
+    MouseDown name' V.BScrollUp   _ _ | name == name' -> modify listMoveUp
+    VtyEvent vty_event -> fallback vty_event
+    _ -> pure ()
+
+handleViewportScrolling :: S.Name -> ViewportScroll S.Name -> EventHandler Event
+handleViewportScrolling name vps e = case e of
+  VtyEvent (V.EvKey key mods) -> handleKeyboard key mods
+  MouseDown name' button _ _ | name == name' -> handleMouse button
+  _ -> pure ()
+  where
+    handleKeyboard key mods = case (key, mods) of
+      (V.KUp, [])                -> flip vScrollBy (-1) vps
+      (V.KDown, [])              -> flip vScrollBy 1 vps
+      (V.KHome, [])              -> vScrollToBeginning vps
+      (V.KEnd, [])               -> vScrollToEnd vps
+      (V.KPageDown, [])          -> flip vScrollPage Down vps
+      (V.KPageUp, [])            -> flip vScrollPage Up vps
+      ((V.KChar 'k'), [])        -> flip vScrollBy (-1) vps
+      ((V.KChar 'j'), [])        -> flip vScrollBy 1 vps
+      ((V.KChar 'g'), [])        -> vScrollToBeginning vps
+      ((V.KChar 'G'), [])        -> vScrollToEnd vps
+      ((V.KChar 'f'), [V.MCtrl]) -> flip vScrollPage Down vps
+      ((V.KChar 'b'), [V.MCtrl]) -> flip vScrollPage Up vps
+      _ -> pure ()
+    handleMouse button = case button of
+      V.BScrollDown -> flip vScrollBy 5 vps
+      V.BScrollUp   -> flip vScrollBy (-5) vps
+      _ -> pure ()
 
 checkNeedsMoreCommits :: S.ModifyState ()
 checkNeedsMoreCommits = do
@@ -743,6 +773,9 @@ easeOut t =
 buildVty :: IO V.Vty
 buildVty = do
   vty <- V.mkVty V.defaultConfig
+  let output_interface = V.outputIface vty
+  when (V.supportsMode output_interface V.Mouse) $
+        liftIO $ V.setMode output_interface V.Mouse True
   return vty
 
 main :: BChan S.Event -> S.State -> IO ()
