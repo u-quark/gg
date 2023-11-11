@@ -76,6 +76,16 @@ alternatively:
 
 `nix-store -qR --include-outputs $(nix-store -qd $(nix-build --show-trace --max-jobs 0)) | grep -v '\.drv$' | sort | uniq | cachix push gg`
 
+To run a development shell:
+
+`nix develop`
+
+To run the e2e tests locally outside nix and create the screenshots:
+
+Need to have `gg` built first! - disable the tests temporally.
+
+`GG_PATH="$(realpath ./result/bin/gg)" nix develop --command bash -c "cd e2e-tests; pytest -vvv"`
+
 Alternatives
 ============
 

@@ -23,6 +23,10 @@
       url = "github:tinted-theming/base16-schemes";
       flake = false;
     };
+    hecate = {
+      url = "github:u-quark/hecate?ref=gg";
+      flake = false;
+    };
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;

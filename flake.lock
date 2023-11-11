@@ -48,6 +48,23 @@
         "type": "github"
       }
     },
+    "hecate": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1699642851,
+        "narHash": "sha256-4qSHD6DWxGaL0YWyotbLhBfLQJSf9+2XTlPaZsja+LU=",
+        "owner": "u-quark",
+        "repo": "hecate",
+        "rev": "66f3a42bd25160aeb6a7c4b2bc1ca56abe4d1a2f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "u-quark",
+        "ref": "gg",
+        "repo": "hecate",
+        "type": "github"
+      }
+    },
     "libgit2": {
       "flake": false,
       "locked": {
@@ -86,6 +103,7 @@
         "base16-schemes": "base16-schemes",
         "brick": "brick",
         "flake-compat": "flake-compat",
+        "hecate": "hecate",
         "libgit2": "libgit2",
         "nixpkgs": "nixpkgs",
         "static-haskell": "static-haskell",

@@ -27,7 +27,7 @@ let
     normalPkgs = patched-pkgs;
     compiler = "${ghc}";
   };
-  tools = import ./tools { inherit pkgs; };
+  tools = import ./tools { inherit pkgs; inherit inputs;};
   haskell-base16-schemes = import ./haskell-base16-schemes.nix {
     inherit pkgs;
     pybase16-builder = tools.pybase16-builder;
@@ -35,8 +35,10 @@ let
   };
   gg = static-haskell.haskellPackages.callPackage (import ./gg.nix) {
     inherit haskell-base16-schemes;
+    git = pkgs.git;
+    hecate = tools.hecate;
   };
-  devShell = pkgs.mkShell { nativeBuildInputs = gg.nativeBuildInputs; };
+  devShell = pkgs.mkShell { nativeBuildInputs = gg.nativeBuildInputs ++ [ tools.hecate ]; };
 in
 {
   inherit gg;
