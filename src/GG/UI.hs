@@ -53,6 +53,8 @@ import qualified GG.UI.Attrs            as Attr
 import           GG.UI.Theme            (getAttrMap)
 import           GG.Utils               (uncurry3)
 import qualified Graphics.Vty           as V
+import           Graphics.Vty.Platform.Unix
+                                        (mkVty)
 import qualified Libgit2                as G
 import           Prelude                hiding (head)
 import           System.Environment     (lookupEnv, setEnv)
@@ -772,7 +774,7 @@ easeOut t =
 
 buildVty :: IO V.Vty
 buildVty = do
-  vty <- V.mkVty V.defaultConfig
+  vty <- mkVty V.defaultConfig
   let output_interface = V.outputIface vty
   when (V.supportsMode output_interface V.Mouse) $
         liftIO $ V.setMode output_interface V.Mouse True

@@ -26,6 +26,7 @@ dependencies:
 - time
 - brick
 - vty
+- vty-unix
 - lens
 - generic-lens
 - vector

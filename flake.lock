@@ -19,11 +19,11 @@
     "brick": {
       "flake": false,
       "locked": {
-        "lastModified": 1698178979,
-        "narHash": "sha256-tE56wo37xJW7KJOd1ynY+7TfsYiuxQGANH2HLvV1IcY=",
+        "lastModified": 1699576624,
+        "narHash": "sha256-e4/Pnd+G6+4UgcHp5lxDxJcKBxvk1b6MNJcF+ALsWZk=",
         "owner": "jtdaugherty",
         "repo": "brick",
-        "rev": "53d9b207e285a4819d7f8d05be46bcfa1d75c5e6",
+        "rev": "d93cdfca4514664fe04242fcdc3e1ee34742e6c2",
         "type": "github"
       },
       "original": {
@@ -107,7 +107,9 @@
         "libgit2": "libgit2",
         "nixpkgs": "nixpkgs",
         "static-haskell": "static-haskell",
-        "vty": "vty"
+        "vty": "vty",
+        "vty-crossplatform": "vty-crossplatform",
+        "vty-unix": "vty-unix"
       }
     },
     "static-haskell": {
@@ -130,17 +132,50 @@
     "vty": {
       "flake": false,
       "locked": {
-        "lastModified": 1697979126,
-        "narHash": "sha256-um/v1bufLeVq8OKOZL/lAb3pshR+uQ4d8MMiLj/o3P4=",
+        "lastModified": 1699726422,
+        "narHash": "sha256-eLUvb3Y3vzWfUfuMcDYWgf25yruEGSYABE0Ouw/A0Dw=",
         "owner": "u-quark",
         "repo": "vty",
-        "rev": "781fff10814412760e657ca1add131a8b2774b6a",
+        "rev": "955322a4068a61aa46e98eceaa4ba9e9240e662e",
         "type": "github"
       },
       "original": {
         "owner": "u-quark",
         "ref": "gg",
         "repo": "vty",
+        "type": "github"
+      }
+    },
+    "vty-crossplatform": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1699071306,
+        "narHash": "sha256-RnetAxIQJjKHEzfzA0MWaFunVbRZ2Qn8Sl/NpnpF7j8=",
+        "owner": "jtdaugherty",
+        "repo": "vty-crossplatform",
+        "rev": "640ea8ee49ea991bab89734f3be126c19c0445a5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jtdaugherty",
+        "repo": "vty-crossplatform",
+        "type": "github"
+      }
+    },
+    "vty-unix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1699758157,
+        "narHash": "sha256-nGLT+6LE69AC5WarOYe+Crh9w4KgeawxaMAwggkWnZc=",
+        "owner": "u-quark",
+        "repo": "vty-unix",
+        "rev": "d44a3a0c43ad0a4f044a1467480700b583e3f3fd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "u-quark",
+        "ref": "gg",
+        "repo": "vty-unix",
         "type": "github"
       }
     }

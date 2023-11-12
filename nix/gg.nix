@@ -14,6 +14,7 @@
   http-client,
   brick,
   vty,
+  vty-unix,
   lens,
   generic-lens,
   vector,
@@ -59,6 +60,7 @@ mkDerivation {
     http-client
     brick
     vty
+    vty-unix
     lens
     generic-lens
     vector
@@ -66,6 +68,7 @@ mkDerivation {
     bytestring
     MissingH
     wreq
+    colour
     # C deps
     libgit2
   ];

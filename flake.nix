@@ -15,6 +15,14 @@
       url = "github:u-quark/vty?ref=gg";
       flake = false;
     };
+    vty-unix = {
+      url = "github:u-quark/vty-unix?ref=gg";
+      flake = false;
+    };
+    vty-crossplatform = {
+      url = "github:jtdaugherty/vty-crossplatform";
+      flake = false;
+    };
     brick = {
       url = "github:jtdaugherty/brick";
       flake = false;
