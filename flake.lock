@@ -51,11 +51,11 @@
     "hecate": {
       "flake": false,
       "locked": {
-        "lastModified": 1699642851,
-        "narHash": "sha256-4qSHD6DWxGaL0YWyotbLhBfLQJSf9+2XTlPaZsja+LU=",
+        "lastModified": 1700521589,
+        "narHash": "sha256-glHemBBBwfUfvnhV5aygse3t+TICih2ZYGA07auZ6f8=",
         "owner": "u-quark",
         "repo": "hecate",
-        "rev": "66f3a42bd25160aeb6a7c4b2bc1ca56abe4d1a2f",
+        "rev": "6f0417e8ef1a1ef9c6a5294d9d7dd9aed934f961",
         "type": "github"
       },
       "original": {
