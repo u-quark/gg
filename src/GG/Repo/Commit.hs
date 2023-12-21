@@ -76,7 +76,7 @@ getSignature commitContent program keyM = do
 createCommit :: G.Repository -> G.Signature -> String -> G.Tree -> [G.Commit] -> IO CreateCommitResult
 createCommit repo author message tree parents = do
   signConfig <- getSignConfig repo
-  committer <- G.signatureDefault repo
+  committer <- G.signatureDefaultCommitter repo
   commitContent <- G.commitCreateBuffer repo author committer "UTF-8" message tree parents
   signatureME <-
     case signConfig of
