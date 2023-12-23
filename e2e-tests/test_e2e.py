@@ -68,8 +68,9 @@ set-option -g mouse on
     return runner
 
 class ScreenshotChecker:
-    def __init__(self, test_name):
+    def __init__(self, test_name, add_screenshots):
         self.test_name = test_name
+        self.add_screenshots = add_screenshots
         self.count = 0
 
     def check(self, runner):
@@ -81,6 +82,11 @@ class ScreenshotChecker:
         filename = f"{self.test_name}_{self.count:03}"
         golden_filepath = screenshots_dir / filename
         new_filepath = screenshots_dir / f"{filename}_new"
+        if self.add_screenshots:
+            with open(golden_filepath, "w") as fd:
+                fd.write(screenshot)
+            print(f"Saved screenshot to {golden_filepath}")
+            return
         if not golden_filepath.exists():
             with open(golden_filepath, "w") as fd:
                 fd.write(screenshot)
@@ -107,7 +113,8 @@ def mouse_wheel_up(x, y):
 @pytest.fixture
 def screenshot_checker(request):
     test_name = request.node.name
-    yield ScreenshotChecker(test_name)
+    add_screenshots = request.config.getoption("--add-screenshots")
+    yield ScreenshotChecker(test_name, add_screenshots)
 
 def test_basic_functionality(tmp_repo, screenshot_checker):
     with open(tmp_repo / "a", "w") as fd:
