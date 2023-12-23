@@ -703,7 +703,7 @@ undoIcon :: String
 undoIcon = "\x21b6"
 
 redoIcon :: String
-redoIcon = "\x21b6"
+redoIcon = "\x21b7"
 
 topIcon :: String
 topIcon = "\x2912"
