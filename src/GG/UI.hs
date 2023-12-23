@@ -272,8 +272,9 @@ fillLine attr line = withAttr attr $ padRight Max line
 drawCommit :: Bool -> S.Commit -> UI
 drawCommit _selected c =
   pure $
-  foldr1
+  foldr
     (<+>)
+    emptyWidget
     [ withAttr Attr.oid (str $ formatOid (c ^. field @"oid"))
     , str " "
     , if c ^. field @"open"
@@ -299,7 +300,7 @@ drawUI s = [runReader ui env]
           (s ^. field @"openCommit")
       let commitRenderer isSelected commit = flip runReader env $ drawCommit isSelected commit
       let commitListUI = padBottom Max (renderList commitRenderer True (s ^. field @"commitList"))
-      pure $ foldr1 (<=>) [commitListUI, openCommitUI, statusBarUI]
+      pure $ foldr (<=>) emptyWidget [commitListUI, openCommitUI, statusBarUI]
 
 drawStatusBar :: S.State -> UI
 drawStatusBar s = do
@@ -361,7 +362,7 @@ openCommitAction = do
   invalidateCacheEntry S.CommitDiffUI
 
 drawSignatures :: S.Commit -> UI
-drawSignatures c = pure $ foldr1 (<=>) cases
+drawSignatures c = pure $ foldr (<=>) emptyWidget cases
   where
     authorName = c ^. field @"authorName"
     authorEmail = c ^. field @"authorEmail"
@@ -408,7 +409,7 @@ drawSignatures c = pure $ foldr1 (<=>) cases
 
 drawDiff :: G.DiffInfo -> UI
 drawDiff diffInfo =
-  foldr1 (<=>) <$>
+  foldr (<=>) emptyWidget <$>
   mapM
     (\(diffDelta, deltaInfo) -> do
        deltaUI <- drawDelta diffDelta
@@ -569,7 +570,7 @@ drawHunkInfo (oldLineWidth, newLineWidth) (hunk, diffLines) = do
         withAttr Attr.diffLineNumberSep (str doubleDividingLine) <+>
         hunkUI
   linesUI <- mapM (drawLine (oldLineWidth, newLineWidth)) diffLines
-  pure $ hunkHeaderUI <=> foldr1 (<=>) linesUI
+  pure $ hunkHeaderUI <=> foldr (<=>) emptyWidget linesUI
 
 pad :: Int -> String -> String
 pad width string = replicate (width - textWidth string) ' ' <> string
@@ -593,8 +594,9 @@ drawLine (oldLineWidth, newLineWidth) diffLine = pure cases
     newLineNo = G.diffLineNewLineno diffLine
     content = replace "\t" "    " $ G.diffLineContent diffLine
     drawLineNos oldLineNoStr newLineNoStr =
-      foldr1
+      foldr
         (<+>)
+        emptyWidget
         [ withAttr Attr.diffLineNumber $ str $ pad oldLineWidth oldLineNoStr
         , withAttr Attr.diffLineNumberSep $ str singleDividingLine
         , withAttr Attr.diffLineNumber $ str $ pad newLineWidth newLineNoStr
@@ -620,8 +622,9 @@ drawOpenCommit openCommit = do
   diffStatsUI <- drawDiffStats openCommit
   let titleUI =
         withAttr Attr.commitSummary $
-        foldr1
+        foldr
           (<+>)
+          emptyWidget
           [ str (openCommit ^. (field @"openCommit" . field @"summary"))
           , diffStatsUI
           , padRight Max (str " ")
@@ -632,8 +635,9 @@ drawOpenCommit openCommit = do
       S.CommitDiffVP
       Vertical
       (cached S.CommitDiffUI $
-       foldr1
+       foldr
          (<=>)
+         emptyWidget
          [ fillLine Attr.defaultAttr $ str " "
          , fillLine Attr.defaultAttr $ str (openCommit ^. (field @"openCommit" . field @"body"))
          , fillLine Attr.defaultAttr $ str " "
@@ -716,8 +720,9 @@ errorIcon = "\x26D4"
 drawDiffStats :: S.OpenCommit -> UI
 drawDiffStats c =
   pure $
-  foldr1
+  foldr
     (<+>)
+    emptyWidget
     [ str " "
     , withAttr Attr.statsFilesModified $ str $ editIcon ++ show (G.diffStatsFilesChanged diffStats)
     , str " "
