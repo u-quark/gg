@@ -214,3 +214,46 @@ def test_navigation(tmp_repo, screenshot_checker):
         # Exit
         runner.press("q")
         runner.await_exit()
+
+def test_rebase_actions(tmp_repo, screenshot_checker):
+    with open(tmp_repo / "test2", "w") as fd:
+        fd.write(f"test 2\n")
+    git("add", "test2", repo=tmp_repo)
+    git("commit", "-m", f"Test 2", "--allow-empty", repo=tmp_repo)
+    with open(tmp_repo / "test1", "w") as fd:
+        fd.write(f"test 1\n")
+    git("add", "test1", repo=tmp_repo)
+    git("commit", "-m", f"Test 1", "--allow-empty", repo=tmp_repo)
+    with get_runner(tmp_repo) as runner:
+        screenshot_checker.check(runner)
+        runner.press("K")  # Move commit #1 up: NO-OP, indicator shown
+        screenshot_checker.check(runner)
+        runner.press("Z")  # Undo: NO-OP, indicator shown
+        screenshot_checker.check(runner)
+        runner.press("J")  # Move commit #1 down
+        screenshot_checker.check(runner)
+        runner.press("K")  # Move commit #1 up
+        screenshot_checker.check(runner)
+        runner.press("S")  # Squash commit #1 into #2
+        runner.press("enter")  # open commit #2
+        screenshot_checker.check(runner)
+        runner.press("q")
+        runner.press("Z")  # Undo last squash
+        screenshot_checker.check(runner)
+        runner.press("F")  # Fixup commit #1 into #2
+        runner.press("enter")  # open commit #2
+        screenshot_checker.check(runner)
+        runner.press("q")
+        runner.press("Z")  # Undo last fixup
+        screenshot_checker.check(runner)
+        runner.press("D")  # Delete commit #1
+        screenshot_checker.check(runner)
+        runner.press("Z")  # Undo last delete
+        screenshot_checker.check(runner)
+        runner.press("R")  # Redo last delete
+        screenshot_checker.check(runner)
+        runner.press("R")  # Redo again: NO-OP, indicator shown
+        screenshot_checker.check(runner)
+        # Exit
+        runner.press("q")
+        runner.await_exit()
