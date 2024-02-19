@@ -1,7 +1,9 @@
 #!python
 
 import subprocess
-from os import chdir, environ
+import shutil
+from os import chdir, environ, remove, chmod, symlink
+import stat
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import sleep
@@ -23,13 +25,19 @@ def git(*args, repo, **env):
     actual_env.update(std_env)
     if env:
         actual_env.update(env)
-    subprocess.run(
-        ("git",) + args,
-        cwd=repo,
-        env=actual_env,
-        stdout=subprocess.DEVNULL,
-        check=True,
-    )
+    try:
+        subprocess.run(
+            ("git",) + args,
+            cwd=repo,
+            env=actual_env,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as ex:
+        pytest.fail(
+            f"Git command failed with exit code {ex.returncode}\n"
+            f"stdout:\n{ex.stdout}\nstderr:\n{ex.stderr}")
 
 @pytest.fixture
 def tmp_repo(tmp_path):
@@ -217,13 +225,13 @@ def test_navigation(tmp_repo, screenshot_checker):
 
 def test_rebase_actions(tmp_repo, screenshot_checker):
     with open(tmp_repo / "test2", "w") as fd:
-        fd.write(f"test 2\n")
+        fd.write("test 2\n")
     git("add", "test2", repo=tmp_repo)
-    git("commit", "-m", f"Test 2", "--allow-empty", repo=tmp_repo)
+    git("commit", "-m", "Test 2", repo=tmp_repo)
     with open(tmp_repo / "test1", "w") as fd:
-        fd.write(f"test 1\n")
+        fd.write("test 1\n")
     git("add", "test1", repo=tmp_repo)
-    git("commit", "-m", f"Test 1", "--allow-empty", repo=tmp_repo)
+    git("commit", "-m", "Test 1", repo=tmp_repo)
     with get_runner(tmp_repo) as runner:
         screenshot_checker.check(runner)
         runner.press("K")  # Move commit #1 up: NO-OP, indicator shown
@@ -257,3 +265,214 @@ def test_rebase_actions(tmp_repo, screenshot_checker):
         # Exit
         runner.press("q")
         runner.await_exit()
+
+def test_diff(tmp_repo, screenshot_checker):
+    def take_diff_screenshot():
+        __tracebackhide__ = True
+        with get_runner(tmp_repo) as runner:
+            runner.press("enter")
+            screenshot_checker.check(runner)
+            runner.press("q")
+            runner.press("q")
+            runner.await_exit()
+
+    with open(tmp_repo / "test_a", "w") as fd:
+        fd.write("line 1\n")
+        fd.write("line 2\n")
+        fd.write("line 3\n")
+    git("add", "test_a", repo=tmp_repo)
+    git("commit", "-m", "Add test_a", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_a", "w") as fd:
+        fd.write("line 1\n")
+        fd.write("mod line\n")
+        fd.write("line 3\n")
+    git("add", "test_a", repo=tmp_repo)
+    git("commit", "-m", "Modify test_a: modify line", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_a", "a") as fd:
+        fd.write("line 4\n")
+        fd.write("line 4\n")
+    git("add", "test_a", repo=tmp_repo)
+    git("commit", "-m", "Modify test_a: add lines", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_a", "w") as fd:
+        fd.write("line 1\n")
+        fd.write("line 2\n")
+        fd.write("line 3\n")
+        fd.write("line 4\n")
+    git("add", "test_a", repo=tmp_repo)
+    git("commit", "-m", "Modify test_a: delete and modify lines", repo=tmp_repo)
+    take_diff_screenshot()
+    shutil.copyfile(tmp_repo / "test_a", tmp_repo / "test_a_copy")
+    git("add", "test_a_copy", repo=tmp_repo)
+    git("commit", "-m", "Copy test_a to test_a_copy", repo=tmp_repo)
+    take_diff_screenshot()
+    git("rm", "test_a_copy", repo=tmp_repo)
+    git("commit", "-m", "Delete test_a_copy", repo=tmp_repo)
+    take_diff_screenshot()
+    shutil.copyfile(tmp_repo / "test_a", tmp_repo / "test_a_copy_2")
+    with open(tmp_repo / "test_a_copy_2", "a") as fd:
+        fd.write("line 5\n")
+    git("add", "test_a_copy_2", repo=tmp_repo)
+    git("commit", "-m", "Copy test_a to test_a_copy_2 with modifications", repo=tmp_repo)
+    take_diff_screenshot()
+    git("rm", "test_a_copy_2", repo=tmp_repo)
+    git("commit", "-m", "Delete test_a_copy_2", repo=tmp_repo)
+    take_diff_screenshot()
+    shutil.copyfile(tmp_repo / "test_a", tmp_repo / "test_a_copy_3")
+    with open(tmp_repo / "test_a_copy_3", "a") as fd:
+        fd.write("line 6\n")
+    with open(tmp_repo / "test_a", "a") as fd:
+        fd.write("line 7\n")
+    git("add", "test_a", "test_a_copy_3", repo=tmp_repo)
+    git("commit", "-m", "Copy test_a to test_a_copy_3 with both modified", repo=tmp_repo)
+    take_diff_screenshot()
+    git("rm", "test_a_copy_3", repo=tmp_repo)
+    git("commit", "-m", "Delete test_a_copy_3", repo=tmp_repo)
+    take_diff_screenshot()
+    git("mv", "test_a", "test_b", repo=tmp_repo)
+    git("commit", "-m", "Rename test_a to test_b", repo=tmp_repo)
+    take_diff_screenshot()
+    git("mv", "test_b", "test_c", repo=tmp_repo)
+    with open(tmp_repo / "test_c", "a") as fd:
+        fd.write("line 5\n")
+    git("add", "test_c", repo=tmp_repo)
+    git("commit", "-m", "Rename test_b to test_c with modifications", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_exec", "w") as fd:
+        fd.write("test\n")
+    chmod(tmp_repo / "test_exec", 0o766)
+    git("add", "test_exec", repo=tmp_repo)
+    git("commit", "-m", "Add executable test_exec", repo=tmp_repo)
+    take_diff_screenshot()
+    chmod(tmp_repo / "test_exec", 0o666)
+    git("add", "test_exec", repo=tmp_repo)
+    git("commit", "-m", "Remove executable flag from test_exec", repo=tmp_repo)
+    take_diff_screenshot()
+    chmod(tmp_repo / "test_exec", 0o766)
+    git("add", "test_exec", repo=tmp_repo)
+    git("commit", "-m", "Add executable flag to test_exec", repo=tmp_repo)
+    take_diff_screenshot()
+    git("rm", "test_exec", repo=tmp_repo)
+    git("commit", "-m", "Delete executable test_exec", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_bin", "wb") as fd:
+        fd.write(b"\0")
+    git("add", "test_bin", repo=tmp_repo)
+    git("commit", "-m", "Add binary test_bin", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_bin", "ab") as fd:
+        fd.write(b"\x01")
+    git("add", "test_bin", repo=tmp_repo)
+    git("commit", "-m", "Modify binary test_bin", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_bin", "w") as fd:
+        fd.write("text\n")
+    git("add", "test_bin", repo=tmp_repo)
+    git("commit", "-m", "Change from binary to text test_bin", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_bin", "wb") as fd:
+        fd.write(b"\0")
+    git("add", "test_bin", repo=tmp_repo)
+    git("commit", "-m", "Change from text to binary test_bin", repo=tmp_repo)
+    take_diff_screenshot()
+    git("rm", "test_bin", repo=tmp_repo)
+    git("commit", "-m", "Delete binary test_bin", repo=tmp_repo)
+    take_diff_screenshot()
+    symlink("./test_a", tmp_repo / "test_link")
+    git("add", "test_link", repo=tmp_repo)
+    git("commit", "-m", "Add symlink test_link", repo=tmp_repo)
+    take_diff_screenshot()
+    remove(tmp_repo / "test_link")
+    symlink("./test_b", tmp_repo / "test_link")
+    git("add", "test_link", repo=tmp_repo)
+    git("commit", "-m", "Modify symlink test_link", repo=tmp_repo)
+    take_diff_screenshot()
+    remove(tmp_repo / "test_link")
+    with open(tmp_repo / "test_link", "w") as fd:
+        fd.write("test\n")
+    git("add", "test_link", repo=tmp_repo)
+    git("commit", "-m", "Change from symlink to regular file test_link", repo=tmp_repo)
+    take_diff_screenshot()
+    remove(tmp_repo / "test_link")
+    symlink("./test_a", tmp_repo / "test_link")
+    git("add", "test_link", repo=tmp_repo)
+    git("commit", "-m", "Change from regular file to symlink test_link", repo=tmp_repo)
+    take_diff_screenshot()
+    git("rm", "test_link", repo=tmp_repo)
+    git("commit", "-m", "Delete symlink test_link", repo=tmp_repo)
+    take_diff_screenshot()
+    git("commit", "--allow-empty", "-m", "An empty commit", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_empty", "w") as fd:
+        pass
+    git("add", "test_empty", repo=tmp_repo)
+    git("commit", "-m", "Add empty file", repo=tmp_repo)
+    take_diff_screenshot()
+    git(
+        "commit", "--allow-empty", "-m", "Committer name is different to the author's",
+        repo=tmp_repo, GIT_COMMITTER_NAME="test2",
+    )
+    take_diff_screenshot()
+    git(
+        "commit", "--allow-empty", "-m", "Committer email is different to the author's",
+        repo=tmp_repo, GIT_COMMITTER_EMAIL="test2@mail.com",
+    )
+    take_diff_screenshot()
+    git(
+        "commit", "--allow-empty", "-m", "Committer date is different to the author's",
+        repo=tmp_repo, GIT_COMMITTER_DATE="1980-01-01 00:00",
+    )
+    take_diff_screenshot()
+    git(
+        "commit", "--allow-empty", "-m", "All committer details are different to the author's",
+        repo=tmp_repo,
+        GIT_COMMITTER_NAME="test2", GIT_COMMITTER_EMAIL="test2@mail.com", GIT_COMMITTER_DATE="1980-01-01 00:00",
+    )
+    take_diff_screenshot()
+    with open(tmp_repo / "test_newline", "w") as fd:
+        fd.write("test")
+    git("add", "test_newline", repo=tmp_repo)
+    git("commit", "-m", "Add file test_newline without a newline at the EOF", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_newline", "w") as fd:
+        fd.write("test\n")
+    git("add", "test_newline", repo=tmp_repo)
+    git("commit", "-m", "Add a newline at the end of file test_newline", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_newline", "w") as fd:
+        fd.write("test")
+    git("add", "test_newline", repo=tmp_repo)
+    git("commit", "-m", "Remove newline from the end of file test_newline", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_newline", "w") as fd:
+        fd.write("modified")
+    git("add", "test_newline", repo=tmp_repo)
+    git("commit", "-m", "Modify last line of a file test_newline", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test_newline", "w") as fd:
+        fd.write("added line\n")
+        fd.write("modified")
+    git("add", "test_newline", repo=tmp_repo)
+    git("commit", "-m", "Add a line to the top of file test_newline", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test.c", "w") as fd:
+        fd.write("int foo() {\n")
+        for i in range(10):
+            fd.write(f"    print(\"test {i}\");\n")
+        fd.write("}\n")
+    git("add", "test.c", repo=tmp_repo)
+    git("commit", "-m", "Add C file test.c", repo=tmp_repo)
+    take_diff_screenshot()
+    with open(tmp_repo / "test.c", "w") as fd:
+        fd.write("int foo() {\n")
+        for i in range(10):
+            if i == 8:
+                fd.write("    print(\"test modified\");\n")
+            else:
+                fd.write(f"    print(\"test {i}\");\n")
+        fd.write("}\n")
+    git("add", "test.c", repo=tmp_repo)
+    git("commit", "-m", "Modify C file test.c within function foo", repo=tmp_repo)
+    take_diff_screenshot()

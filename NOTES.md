@@ -86,6 +86,10 @@ Need to have `gg` built first! - disable the tests temporally.
 
 `GG_PATH="$(realpath ./result/bin/gg)" nix develop --command bash -c "cd e2e-tests; pytest -vvv"`
 
+While developing a tests, to add all screenshots:
+
+`rm e2e-tests/screenshots/test_XXX_*; GG_PATH="$(realpath ./result/bin/gg)" nix develop --command bash -c "cd e2e-tests; pytest -vvv -k test_XXX --add-screenshots"; cat e2e-tests/screenshots/test_XXX_*`
+
 Alternatives
 ============
 
