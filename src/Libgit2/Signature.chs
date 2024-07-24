@@ -20,8 +20,7 @@ module Libgit2.Signature
   , signatureName
   , signatureEmail
   , signatureWhen
-  , signatureDefaultAuthor
-  , signatureDefaultCommitter
+  , signatureDefaultFromEnv
   ) where
 
 {#import Libgit2.Types#}
@@ -53,6 +52,4 @@ signatureWhen (Signature fp) =
     pure $ gitToLocalTime time offset
   )
 
-{#fun signature_default_author as signatureDefaultAuthor { alloca- `Signature' peekNewSignature*, `Repository' } -> `Int' checkReturnCode*-#}
-
-{#fun signature_default_committer as signatureDefaultCommitter { alloca- `Signature' peekNewSignature*, `Repository' } -> `Int' checkReturnCode*-#}
+{#fun signature_default_from_env as signatureDefaultFromEnv { alloca- `Signature' peekNewSignature*, alloca- `Signature' peekNewSignature*, `Repository' } -> `Int' checkReturnCode*-#}

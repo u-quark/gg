@@ -68,16 +68,16 @@
     "libgit2": {
       "flake": false,
       "locked": {
-        "lastModified": 1703195592,
-        "narHash": "sha256-yCyV1Bn97V7CwppgdvCSu7nTYn2pQ1qN+xzY/txI2vM=",
-        "owner": "u-quark",
+        "lastModified": 1721209236,
+        "narHash": "sha256-tDUQi+s8sxJ30SmUH7Ln9WmDz5jGatlgKumjwi7KnCo=",
+        "owner": "libgit2",
         "repo": "libgit2",
-        "rev": "17f7213f88c7272d1503479c9cac56abeb3a2a8f",
+        "rev": "503b66cf00ad7dca940148529f60b1a409ccc462",
         "type": "github"
       },
       "original": {
-        "owner": "u-quark",
-        "ref": "gg",
+        "owner": "libgit2",
+        "ref": "503b66cf",
         "repo": "libgit2",
         "type": "github"
       }

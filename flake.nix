@@ -8,7 +8,7 @@
       flake = false;
     };
     libgit2 = {
-      url = "github:u-quark/libgit2?ref=gg";
+      url = "github:libgit2/libgit2?ref=503b66cf";
       flake = false;
     };
     vty = {
